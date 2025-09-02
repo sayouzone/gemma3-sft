@@ -1,0 +1,17 @@
+python-dotenv
+pillow
+protobuf
+
+torch
+datasets
+transformers
+accelerate
+bitsandbytes
+sentencepiece
+peft
+trl
+
+tensorboard
+torchvision
+
+evaluate
