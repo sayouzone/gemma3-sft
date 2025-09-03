@@ -1,48 +1,26 @@
+# Cloud Run에서 Gemma 3 모델 실행
 
+Cloud Run에서 Gemma 3 모델을 실행할 때 적합한 환경을 확인하는 것이 목적이다.<br>
+Fine-tuning된 모델을 Hugging Face Hub에서 다운로드하거나,
+Google Cloud Storage에서 다운로드하는 방법을 확인할 것이다.
 
-```bash
-export SERVICE_NAME=gemma3-test
-export GEMMA_PARAMETER=gemma3-1b
-export PROJECT_ID=sayouzone-ai
-export REGION=us-central1
+환경에 따른 성능 비교
 
-gcloud run deploy $SERVICE_NAME \
-   --image us-docker.pkg.dev/cloudrun/container/gemma/$GEMMA_PARAMETER \
-   --concurrency 4 \
-   --cpu 8 \
-   --set-env-vars OLLAMA_NUM_PARALLEL=4 \
-   --gpu 1 \
-   --gpu-type nvidia-l4 \
-   --max-instances 1 \
-   --memory 32Gi \
-   --no-allow-unauthenticated \
-   --no-cpu-throttling \
-   --timeout=600 \
-   --project $PROJECT_ID \
-   --region $REGION
-```
+- Pre-trained models
+- Fine-tuned models
 
-```bash
-gcloud run services proxy ollama-gemma --port=9090
-```
+그리고 빠르게 빌드하고 배포하는 스크립트를 작성<br>
+.env으로 HF_TOKEN 관리<br>
+Secret Manager으로 HF_TOKEN 관리<br>
 
-```bash
-curl http://localhost:9090/api/generate -d '{
-  "model": "gemma3:4b",
-  "prompt": "Why is the sky blue?"
-}'
-```
+## Pre-trained model 실행
 
-```bash
-export cloud_run_url=https://gemma3-test-1037372895180.us-central1.run.app
+[]()
 
-curl "$cloud_run_url/v1beta/models/*:generateContent" \
--H 'Content-Type: application/json' \
--H "Authorization: Bearer $(gcloud auth print-identity-token)" \
--X POST \
--d '{
-  "contents": [{
-    "parts":[{"text": "Write a story about a magic backpack. You are the narrator of an interactive text adventure game."}]
-    }]
-    }'
-```
+## Fine-tuned model 실행 (Hugging Face Hub)
+
+[]()
+
+## Fine-tuned model 실행 (Google Cloud Storage)
+
+[]()

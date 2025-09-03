@@ -14,6 +14,7 @@ export REGION="us-central1" # GPU를 지원하는 리전 선택
 export REPO_NAME="gemma3-repo"
 export SQL_IMAGE_NAME="gemma3-sql-ft-service"
 export SQL_IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${SQL_IMAGE_NAME}:latest"
+export HF_TOKEN=sayouzone-huggingface-token:latest
 ```
 
 **2. Artifact Registry 저장소 생성 (최초 한 번만 실행)::**
