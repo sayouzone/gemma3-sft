@@ -113,7 +113,7 @@ pip install -r requirements.txt
 .env 파일 생성
 
 ```text
-HF_TOKEN=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
+HF_TOKEN=YOUR_HUGGING_FACE_TOKEN
 ```
 
 #### Datasets
