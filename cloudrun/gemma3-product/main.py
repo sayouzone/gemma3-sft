@@ -13,7 +13,7 @@ from utils import storageapi, gemma3api
 load_dotenv()
 
 # 환경 변수 설정
-os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
+#os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
 model_type = os.getenv("model_type")
 ft_local_path = os.getenv("ft_local_path")
 ft_gcs_bucket = os.getenv("ft_gcs_bucket")

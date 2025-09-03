@@ -30,49 +30,6 @@ gcloud artifacts repositories create ${REPO_NAME} \
 gcloud builds submit --tag ${SQL_IMAGE_TAG}
 ```
 
-```bash
-ERROR: (gcloud.builds.submit) PERMISSION_DENIED: The caller does not have permission. This command is authenticated as sjkim@sayouzone.com which is the active account specified by the [core/account] property
-```
-
-```bash
-gcloud projects add-iam-policy-binding $PROJECT_ID \
-    --member="user:sjkim@sayouzone.com" \
-    --role="roles/cloudbuild.builds.editor"
-```
-
-```bash
-ERROR: (gcloud.builds.submit) INVALID_ARGUMENT: could not resolve source: googleapi: Error 403: 1037372895180-compute@developer.gserviceaccount.com does not have storage.objects.get access to the Google Cloud Storage object. Permission 'storage.objects.get' denied on resource (or it may not exist)., forbidden
-```
-
-```bash
-gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-    --member="serviceAccount:1037372895180-compute@developer.gserviceaccount.com" \
-    --role="roles/storage.objectViewer"
-```
-
-```bash
-INFO: The service account running this build projects/sayouzone-ai/serviceAccounts/1037372895180-compute@developer.gserviceaccount.com does not have permission to write logs to Cloud Logging. To fix this, grant the Logs Writer (roles/logging.logWriter) role to the service account.
-
-1 message(s) issued.
-ERROR: (gcloud.builds.submit) build 5e4fb29b-66d9-46ea-a687-902b1a5270df completed with status "FAILURE"
-```
-
-```bash
-gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-    --member="serviceAccount:1037372895180-compute@developer.gserviceaccount.com" \
-    --role="roles/logging.logWriter"
-```
-
-```bash
-denied: Permission "artifactregistry.repositories.uploadArtifacts" denied on resource "projects/sayouzone-ai/locations/us-central1/repositories/gemma3-repo" (or it may not exist)
-```
-
-```bash
-gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
-    --member="serviceAccount:1037372895180-compute@developer.gserviceaccount.com" \
-    --role="roles/artifactregistry.writer"
-```
-
 ## Cloud Run에 배포
 
 빌드된 컨테이너 이미지를 사용하여 GPU가 장착된 Cloud Run 서비스에 배포합니다.
@@ -94,6 +51,7 @@ gcloud run deploy ${SQL_IMAGE_NAME} \
     --concurrency=1 \
     --no-cpu-throttling \
     --allow-unauthenticated \
+    --update-secrets=HF_TOKEN=$HF_TOKEN \
     --timeout=15m
 ```
 
@@ -141,6 +99,55 @@ curl -X GET "http://localhost:8000/market/naver/삼성전자/2025-01-01/2025-08-
 ```bash
 {"response":"user\nGoogle Cloud Run의 장점은 무엇인가요?\nmodel\nGoogle Cloud Run의 장점은 다음과 같습니다.\n\n1. 사용자 친화적이고 편리합니다.\n2. 가볍고 성능이 좋습니다.\n\n하지만 사용자 친화성과 가볍고 성능이 좋은 것만 사용하는 것은 좋지 않습니다. 전체적인 사용 경험을 고려해야 합니다.\n\n<SCHEMA>\nCREATE TABLE Google_Cloud_Run (Project_ID INT, Terraform_Version VARCHAR(64))\n</SCHEMA>\n\n<USER_QUERY>\nThe Terraform_Version is '7.5'. I want to know how much energy was consumed by running Terraform on Google Cloud Run over the past year.\n</USER_QUERY>\n\n<SCHEMA>\nTerraform_Version is '7.5' and"}
 ```
+
+## Errors
+
+#### Permission Errors
+
+```bash
+ERROR: (gcloud.builds.submit) PERMISSION_DENIED: The caller does not have permission. This command is authenticated as sjkim@sayouzone.com which is the active account specified by the [core/account] property
+```
+
+```bash
+gcloud projects add-iam-policy-binding $PROJECT_ID \
+    --member="user:sjkim@sayouzone.com" \
+    --role="roles/cloudbuild.builds.editor"
+```
+
+```bash
+ERROR: (gcloud.builds.submit) INVALID_ARGUMENT: could not resolve source: googleapi: Error 403: 1037372895180-compute@developer.gserviceaccount.com does not have storage.objects.get access to the Google Cloud Storage object. Permission 'storage.objects.get' denied on resource (or it may not exist)., forbidden
+```
+
+```bash
+gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+    --member="serviceAccount:1037372895180-compute@developer.gserviceaccount.com" \
+    --role="roles/storage.objectViewer"
+```
+
+```bash
+INFO: The service account running this build projects/sayouzone-ai/serviceAccounts/1037372895180-compute@developer.gserviceaccount.com does not have permission to write logs to Cloud Logging. To fix this, grant the Logs Writer (roles/logging.logWriter) role to the service account.
+
+1 message(s) issued.
+ERROR: (gcloud.builds.submit) build 5e4fb29b-66d9-46ea-a687-902b1a5270df completed with status "FAILURE"
+```
+
+```bash
+gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+    --member="serviceAccount:1037372895180-compute@developer.gserviceaccount.com" \
+    --role="roles/logging.logWriter"
+```
+
+```bash
+denied: Permission "artifactregistry.repositories.uploadArtifacts" denied on resource "projects/sayouzone-ai/locations/us-central1/repositories/gemma3-repo" (or it may not exist)
+```
+
+```bash
+gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+    --member="serviceAccount:1037372895180-compute@developer.gserviceaccount.com" \
+    --role="roles/artifactregistry.writer"
+```
+
+#### PyTorch Errors
 
 ```bash
 ERROR: (gcloud.run.deploy) Revision 'gemma3-ft-sql-service-00001-5nb' is not ready and cannot serve traffic. The user-provided container failed to start and listen on the port defined provided by the PORT=8080 environment variable within the allocated timeout. This can happen when the container port is misconfigured or if the timeout is too short. The health check timeout can be extended. Logs for this revision might contain more information.

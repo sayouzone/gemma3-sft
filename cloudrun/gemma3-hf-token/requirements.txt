@@ -1,0 +1,6 @@
+# requirements.txt
+fastapi
+uvicorn
+python-dotenv
+
+huggingface_hub

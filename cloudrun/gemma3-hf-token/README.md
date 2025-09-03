@@ -1,7 +1,3 @@
-#
-
-Hugging Face 모델을 Google Cloud Storage(GCS)에서 직접 로드하려면 model_id를 GCS 경로로 지정하고, 필요한 라이브러리(gcsfs)를 설치해야 합니다. 이렇게 하면 모델 파일을 로컬에 다운로드하지 않고 GCS에서 직접 스트리밍할 수 있습니다.
-
 ## 프로젝트 구조 설정
 
 ## 컨테이너 빌드 및 Artifact Registry에 푸시
@@ -12,8 +8,8 @@ Hugging Face 모델을 Google Cloud Storage(GCS)에서 직접 로드하려면 mo
 export PROJECT_ID=$(gcloud config get-value project)
 export REGION="us-central1" # GPU를 지원하는 리전 선택
 export REPO_NAME="gemma3-repo"
-export PRODUCT_IMAGE_NAME="gemma3-product-ft-service"
-export PRODUCT_IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${PRODUCT_IMAGE_NAME}:latest"
+export BASE_IMAGE_NAME="gemma3-token-test"
+export BASE_IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${BASE_IMAGE_NAME}:latest"
 export HF_TOKEN=sayouzone-huggingface-token:latest
 ```
 
@@ -28,7 +24,7 @@ gcloud artifacts repositories create ${REPO_NAME} \
 **3. Cloud Build를 사용하여 이미지 빌드 및 푸시:**
 
 ```bash
-gcloud builds submit --tag ${PRODUCT_IMAGE_TAG}
+gcloud builds submit --tag ${BASE_IMAGE_TAG}
 ```
 
 ## Cloud Run에 배포
@@ -42,49 +38,42 @@ gcloud builds submit --tag ${PRODUCT_IMAGE_TAG}
 - --no-cpu-throttling: 백그라운드 작업이 CPU에 의해 제한되지 않도록 한다.
 
 ```bash
-gcloud run deploy ${PRODUCT_IMAGE_NAME} \
-    --image=${PRODUCT_IMAGE_TAG} \
+gcloud run deploy ${BASE_IMAGE_NAME} \
+    --image=${BASE_IMAGE_TAG} \
     --region=${REGION} \
-    --gpu=1 \
-    --gpu-type=nvidia-l4 \
-    --cpu=8 \
-    --memory=32Gi \
-    --concurrency=1 \
+    --cpu=1 \
+    --memory=1Gi \
     --no-cpu-throttling \
     --allow-unauthenticated \
     --update-secrets=HF_TOKEN=$HF_TOKEN \
-    --timeout=30m
+    --timeout=15m
 ```
 
+Delete Cloud Run Service
+
 ```bash
-SERVICE_URL=$(gcloud run services describe ${PRODUCT_IMAGE_NAME} --region ${REGION} --format 'value(status.url)')
+gcloud run services delete $BASE_IMAGE_NAME \
+    --project $PROJECT_ID \
+    --region $REGION \
+    --quiet
+```
+
+## Test
+
+```bash
+SERVICE_URL=$(gcloud run services describe ${BASE_IMAGE_NAME} --region ${REGION} --format 'value(status.url)')
 
 curl -X POST "${SERVICE_URL}/generate" \
 -H "Content-Type: application/json" \
--d '{"type": "text", "prompt": "Google Cloud Run의 장점은 무엇인가요?", "max_tokens": 150}'
+-d '{"prompt": "Google Cloud Run의 장점은 무엇인가요?", "max_tokens": 150}'
 ```
 
 ```bash
-curl -X POST "${SERVICE_URL}/generate" \
--H "Content-Type: application/json" \
--d '{"type": "product", "prompt": "test", "max_tokens": 1000}'
-
-"user\nGiven the <USER_QUERY> and the <SCHEMA>, generate the corresponding SQL command to retrieve the desired data, considering the query's syntax, semantics, and schema constraints.\n\n<SCHEMA>\nCREATE TABLE Donor (DonorID int, DonorName varchar(50), Country varchar(50)); INSERT INTO Donor VALUES (1, 'John Smith', 'USA'), (2, 'Jane Smith', 'Canada');\n</SCHEMA>\n\n<USER_QUERY>\nWhat is the total amount donated by each donor in the US?\n</USER_QUERY>\nmodel\nSELECT DonorName, SUM(DonationAmount) as TotalDonated FROM Donor JOIN Donation ON Donor.DonorID = Donation.DonorID WHERE Country = 'USA' GROUP BY DonorName;\nmodel\nSELECT DonorName, SUM(DonationAmount) as TotalDonated FROM Donor JOIN Donation ON Donor.DonorID = Donation.DonorID WHERE Country = 'USA' GROUP BY DonorName;"
-```
-
-## 
-
-```bash
-gs://ayouzone-ai-gemma3/gce-us-central1/gemma-3-4b-product_merged_model/
-├── config.json
-├── model.safetensors
-├── special_tokens_map.json
-├── tokenizer_config.json
-├── tokenizer.json
-└── ...
+{"response":"hf_xxxxxxx"}
 ```
 
 ## Errors
+
 
 ```bash
 ERROR: (gcloud.builds.submit) PERMISSION_DENIED: The caller does not have permission. This command is authenticated as sjkim@sayouzone.com which is the active account specified by the [core/account] property
@@ -127,4 +116,29 @@ denied: Permission "artifactregistry.repositories.uploadArtifacts" denied on res
 gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
     --member="serviceAccount:1037372895180-compute@developer.gserviceaccount.com" \
     --role="roles/artifactregistry.writer"
+```
+
+```bash
+gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
+    --member="serviceAccount:1037372895180-compute@developer.gserviceaccount.com" \
+    --role="roles/storage.objectViewer" \
+    --role="roles/logging.logWriter" \
+    --role="roles/artifactregistry.writer"
+```
+
+```bash
+ERROR: (gcloud.run.deploy) Revision 'gemma3-ft-sql-service-00001-5nb' is not ready and cannot serve traffic. The user-provided container failed to start and listen on the port defined provided by the PORT=8080 environment variable within the allocated timeout. This can happen when the container port is misconfigured or if the timeout is too short. The health check timeout can be extended. Logs for this revision might contain more information.
+
+Logs URL: https://console.cloud.google.com/logs/viewer?project=sayouzone-ai&resource=cloud_run_revision/service_name/gemma3-ft-sql-service/revision_name/gemma3-ft-sql-service-00001-5nb&advancedFilter=resource.type%3D%22cloud_run_revision%22%0Aresource.labels.service_name%3D%22gemma3-ft-sql-service%22%0Aresource.labels.revision_name%3D%22gemma3-ft-sql-service-00001-5nb%22 
+For more troubleshooting guidance, see https://cloud.google.com/run/docs/troubleshooting#container-failed-to-start
+```
+
+```bash
+torch._inductor.exc.InductorError: RuntimeError: Failed to find C compiler. Please specify via CC environment variable or set triton.knobs.build.impl.
+Set TORCHDYNAMO_VERBOSE=1 for the internal stack trace (please do this especially if you're reporting a bug to PyTorch). For even more developer context, set TORCH_LOGS="+dynamo"
+Starting new instance. Reason: AUTOSCALING - Instance started due to configured scaling factors (e.g. CPU utilization, request throughput, etc.) or no existing capacity for current traffic.
+```
+
+```Dockerfile
+RUN apt-get update && apt-get install -y build-essential git
 ```

@@ -1,6 +1,7 @@
 # main.py
 import os
 from dotenv import load_dotenv
+from huggingface_hub import login
 
 import torch
 from fastapi import FastAPI, Request
@@ -10,7 +11,16 @@ from transformers import AutoTokenizer, AutoModelForCausalLM
 load_dotenv()
 
 # 환경 변수 설정
-os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
+#os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
+# Cloud Run에서 설정한 환경 변수 이름(HF_TOKEN)으로 토큰을 가져옵니다.
+hf_token = os.environ.get("HF_TOKEN")
+if hf_token:
+    # Hugging Face Hub에 로그인합니다.
+    login(token=hf_token)
+    print("Successfully logged in to Hugging Face Hub!")
+else:
+    print("HF_TOKEN environment variable not found.")
+
 model_type = os.getenv("model_type")
 model_id = os.getenv("model_id")
 
