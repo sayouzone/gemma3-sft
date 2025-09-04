@@ -15,6 +15,10 @@ export REPO_NAME="gemma3-repo"
 export PRODUCT_IMAGE_NAME="gemma3-product-ft-service"
 export PRODUCT_IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${PRODUCT_IMAGE_NAME}:latest"
 export HF_TOKEN=sayouzone-huggingface-token:latest
+
+export BUCKET_NAME="ayouzone-ai-gemma3"
+export VOLUME_NAME=
+export MOUNT_PATH=
 ```
 
 **2. Artifact Registry 저장소 생성 (최초 한 번만 실행)::**
@@ -55,6 +59,25 @@ gcloud run deploy ${PRODUCT_IMAGE_NAME} \
     --update-secrets=HF_TOKEN=$HF_TOKEN \
     --timeout=30m
 ```
+
+```bash
+gcloud run deploy ${PRODUCT_IMAGE_NAME} \
+    --image=${PRODUCT_IMAGE_TAG} \
+    --region=${REGION} \
+    --gpu=1 \
+    --gpu-type=nvidia-l4 \
+    --cpu=8 \
+    --memory=32Gi \
+    --concurrency=1 \
+    --no-cpu-throttling \
+    --allow-unauthenticated \
+    --add-volume name=$VOLUME_NAME,type=cloud-storage,bucket=$BUCKET_NAME \
+    --add-volume-mount volume=$VOLUME_NAME,mount-path=$MOUNT_PATH \
+    --update-secrets=HF_TOKEN=$HF_TOKEN \
+    --timeout=30m
+```
+
+## Tests
 
 ```bash
 SERVICE_URL=$(gcloud run services describe ${PRODUCT_IMAGE_NAME} --region ${REGION} --format 'value(status.url)')
