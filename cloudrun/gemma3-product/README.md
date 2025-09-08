@@ -1,6 +1,13 @@
-#
+# Gemma 3 fine-tuned model on Cloud Run using Google Cloud Storage
 
-Hugging Face 모델을 Google Cloud Storage(GCS)에서 직접 로드하려면 model_id를 GCS 경로로 지정하고, 필요한 라이브러리(gcsfs)를 설치해야 합니다. 이렇게 하면 모델 파일을 로컬에 다운로드하지 않고 GCS에서 직접 스트리밍할 수 있습니다.
+Hugging Face 모델을 Google Cloud Storage(GCS)에서 직접 로드하려면 model_id를 GCS 경로로 지정해야 합니다. 이렇게 하면 모델 파일을 로컬에 다운로드하지 않고 GCS에서 직접 스트리밍할 수 있습니다.
+
+Google Cloud Storage(GCS) API 에서 Transfer Manager 동시 다운로드
+
+- [Cloud Run에서 Gemma 3 실행](https://cloud.google.com/run/docs/run-gemma-on-cloud-run?hl=ko)
+- [권장사항: GPU를 사용하는 Cloud Run의 AI 추론](https://cloud.google.com/run/docs/configuring/services/gpu-best-practices?hl=ko)
+- [동시에 청크의 파일 다운로드](https://cloud.google.com/storage/docs/samples/storage-transfer-manager-download-chunks-concurrently?hl=ko)
+- [슬라이스 객체 다운로드](https://cloud.google.com/storage/docs/sliced-object-downloads?hl=ko)
 
 ## 프로젝트 구조 설정
 
@@ -15,24 +22,20 @@ export REPO_NAME="gemma3-repo"
 export PRODUCT_IMAGE_NAME="gemma3-product-ft-service"
 export PRODUCT_IMAGE_TAG="${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPO_NAME}/${PRODUCT_IMAGE_NAME}:latest"
 export HF_TOKEN=sayouzone-huggingface-token:latest
-
-export BUCKET_NAME="ayouzone-ai-gemma3"
-export VOLUME_NAME=
-export MOUNT_PATH=
 ```
 
 **2. Artifact Registry 저장소 생성 (최초 한 번만 실행)::**
 
 ```bash
-gcloud artifacts repositories create ${REPO_NAME} \
+gcloud artifacts repositories create $REPO_NAME \
     --repository-format=docker \
-    --location=${REGION}
+    --location=$REGION
 ```
 
 **3. Cloud Build를 사용하여 이미지 빌드 및 푸시:**
 
 ```bash
-gcloud builds submit --tag ${PRODUCT_IMAGE_TAG}
+gcloud builds submit --tag $PRODUCT_IMAGE_TAG
 ```
 
 ## Cloud Run에 배포
@@ -46,9 +49,9 @@ gcloud builds submit --tag ${PRODUCT_IMAGE_TAG}
 - --no-cpu-throttling: 백그라운드 작업이 CPU에 의해 제한되지 않도록 한다.
 
 ```bash
-gcloud run deploy ${PRODUCT_IMAGE_NAME} \
-    --image=${PRODUCT_IMAGE_TAG} \
-    --region=${REGION} \
+gcloud run deploy $PRODUCT_IMAGE_NAME \
+    --image=$PRODUCT_IMAGE_TAG \
+    --region=$REGION \
     --gpu=1 \
     --gpu-type=nvidia-l4 \
     --cpu=8 \
@@ -60,10 +63,12 @@ gcloud run deploy ${PRODUCT_IMAGE_NAME} \
     --timeout=30m
 ```
 
+#### Startup Probe
+
 ```bash
-gcloud run deploy ${PRODUCT_IMAGE_NAME} \
-    --image=${PRODUCT_IMAGE_TAG} \
-    --region=${REGION} \
+gcloud run deploy $PRODUCT_IMAGE_NAME \
+    --image=$PRODUCT_IMAGE_TAG \
+    --region=$REGION \
     --gpu=1 \
     --gpu-type=nvidia-l4 \
     --cpu=8 \
@@ -71,20 +76,40 @@ gcloud run deploy ${PRODUCT_IMAGE_NAME} \
     --concurrency=1 \
     --no-cpu-throttling \
     --allow-unauthenticated \
-    --add-volume name=$VOLUME_NAME,type=cloud-storage,bucket=$BUCKET_NAME \
-    --add-volume-mount volume=$VOLUME_NAME,mount-path=$MOUNT_PATH \
     --update-secrets=HF_TOKEN=$HF_TOKEN \
+    --startup-probe tcpSocket.port=8080,initialDelaySeconds=240,failureThreshold=5,timeoutSeconds=240,periodSeconds=240 \
     --timeout=30m
+```
+
+#### Delete Cloud Run Service
+
+```bash
+gcloud run services delete $PRODUCT_IMAGE_NAME \
+    --project $PROJECT_ID \
+    --region $REGION \
+    --quiet
 ```
 
 ## Tests
 
 ```bash
 SERVICE_URL=$(gcloud run services describe ${PRODUCT_IMAGE_NAME} --region ${REGION} --format 'value(status.url)')
+```
 
+```bash
 curl -X POST "${SERVICE_URL}/generate" \
 -H "Content-Type: application/json" \
 -d '{"type": "text", "prompt": "Google Cloud Run의 장점은 무엇인가요?", "max_tokens": 150}'
+
+"user\nGoogle Cloud Run의 장점은 무엇인가요?\nmodel\nGoogle Cloud Run으로 애플리케이션 배포는 매우 간단합니다. 개발자는 애플리케이션 코드와 관련된 파일과 포트를 지정할 수 있으며, Google Cloud Run이 자동으로 서버리스 환경에서 실행합니다. 이는 개발자가 관리하고 운영해야 하는 하드웨어 또는 소프트웨어 설정에 대한 부담을 감소시킵니다. 또한 배포 기간이 짧아지고 애플리케이션의 가용성과 신뢰성이 증가합니다. 홍채이동기억기술금융교육투자법률정보한국사유아과외대학원대학연구센터교과서기업체임워크문화역사연애스포츠오디션의료연예예능스포츠과학수사법학관광사업법과학기술음"
+```
+
+```bash
+curl -X POST "${SERVICE_URL}/generate" \
+-H "Content-Type: application/json" \
+-d '{"type": "text", "prompt": "Google Cloud Run의 장점은 무엇인가요?", "max_tokens": 1024}'
+
+"user\nGoogle Cloud Run의 장점은 무엇인가요?\nmodel\nGoogle Cloud Run으로 웹서비스를 배포하고 운영하는 것의 장점은 다음과 같습니다: 1. 확장성과 무한대스케일링: Google Cloud Run은 자동 스케일링이 가능하여 트래픽 요구사항에 따라 서버 인원을 증가 또는 감소시킬 수 있어 확장성과 무한대스케일링이 가능합니다. 2. 로드밸런싱 및 SSL 인증: Google Cloud Run은 자동으로 로드밸런싱과 SSL 인증을 관리하여 안정적인 서비스 제공을 보장합니다. 3. 저준비금액정책: 비용 효율적입니다. 배포 시 불필요한 자원이 사용될 경우 이를 자동으로 감축하여 비용을 관리합니다. 4. 자동확장성: 트래픽 요구사항 변화에 따라 자동으로 서비스 인원을 확장하거나 감소시켜 긴장을 관리할 수 있습니다. 5. 지속가능한 개발방법: 개발자가 코드 작성과 테스트 및 배포를 간소화할 수 있는 지속가능한 개발방법을 제공합니다. 이러한 장점들은 Google Cloud Run이 현대 웹서비스 발리다시 위해 탁월한 선택임을 보여줍니다."
 ```
 
 ```bash
@@ -92,7 +117,7 @@ curl -X POST "${SERVICE_URL}/generate" \
 -H "Content-Type: application/json" \
 -d '{"type": "product", "prompt": "test", "max_tokens": 1000}'
 
-"user\nGiven the <USER_QUERY> and the <SCHEMA>, generate the corresponding SQL command to retrieve the desired data, considering the query's syntax, semantics, and schema constraints.\n\n<SCHEMA>\nCREATE TABLE Donor (DonorID int, DonorName varchar(50), Country varchar(50)); INSERT INTO Donor VALUES (1, 'John Smith', 'USA'), (2, 'Jane Smith', 'Canada');\n</SCHEMA>\n\n<USER_QUERY>\nWhat is the total amount donated by each donor in the US?\n</USER_QUERY>\nmodel\nSELECT DonorName, SUM(DonationAmount) as TotalDonated FROM Donor JOIN Donation ON Donor.DonorID = Donation.DonorID WHERE Country = 'USA' GROUP BY DonorName;\nmodel\nSELECT DonorName, SUM(DonationAmount) as TotalDonated FROM Donor JOIN Donation ON Donor.DonorID = Donation.DonorID WHERE Country = 'USA' GROUP BY DonorName;"
+"Avengers Assemble Titanheld Iron Man Actionfigur: 30.5 cm große Iron Man Figur, ideal für sammelnden Fans. Hasbro Marvel Avengers Serie.  Diese Titanheld Iron Man Figur ist ein Muss für jeden Marvel Avengers Collector! Mit ihrer hohen Qualität und detaillierten Gestaltung ist sie ein perfektes Geschenk für Kinder und erwachsene Fans.  Für weiteren Marvel Avengers Enthusiasmus kaufen Sie diese großartige Titanheld Iron Man Figur heute!"
 ```
 
 ## 
@@ -100,7 +125,17 @@ curl -X POST "${SERVICE_URL}/generate" \
 ```bash
 gs://ayouzone-ai-gemma3/gce-us-central1/gemma-3-4b-product_merged_model/
 ├── config.json
-├── model.safetensors
+├── model-00001-of-00010.safetensors
+├── model-00002-of-00010.safetensors
+├── model-00003-of-00010.safetensors
+├── model-00004-of-00010.safetensors
+├── model-00005-of-00010.safetensors
+├── model-00006-of-00010.safetensors
+├── model-00007-of-00010.safetensors
+├── model-00008-of-00010.safetensors
+├── model-00009-of-00010.safetensors
+├── model-00010-of-00010.safetensors
+├── model.safetensors.index.json
 ├── special_tokens_map.json
 ├── tokenizer_config.json
 ├── tokenizer.json
@@ -108,6 +143,8 @@ gs://ayouzone-ai-gemma3/gce-us-central1/gemma-3-4b-product_merged_model/
 ```
 
 ## Errors
+
+#### IAM Role Error
 
 ```bash
 ERROR: (gcloud.builds.submit) PERMISSION_DENIED: The caller does not have permission. This command is authenticated as sjkim@sayouzone.com which is the active account specified by the [core/account] property
@@ -150,4 +187,10 @@ denied: Permission "artifactregistry.repositories.uploadArtifacts" denied on res
 gcloud projects add-iam-policy-binding $(gcloud config get-value project) \
     --member="serviceAccount:1037372895180-compute@developer.gserviceaccount.com" \
     --role="roles/artifactregistry.writer"
+```
+
+#### Startup Probe Errors
+
+```bash
+ERROR: (gcloud.run.deploy) Revision 'gemma3-product-ft-service-00001-qls' is not ready and cannot serve traffic. Container failed to become healthy. Startup probes timed out after 4m (1 attempts with a timeout of 4m each). There was an initial delay of 0s. If this happens frequently, consider adjusting the probe settings.
 ```

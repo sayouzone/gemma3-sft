@@ -6,7 +6,12 @@ import os
 import time
 from dotenv import load_dotenv
 
-#https://cloud.google.com/storage/docs/samples/storage-transfer-manager-download-bucket?hl=ko#code-sample
+"""
+https://cloud.google.com/storage/docs/samples/storage-transfer-manager-download-bucket?hl=ko#code-sample
+https://cloud.google.com/run/docs/configuring/services/gpu-best-practices?hl=ko
+https://cloud.google.com/storage/docs/samples/storage-transfer-manager-download-chunks-concurrently?hl=ko
+https://cloud.google.com/storage/docs/samples/storage-stream-file-download?hl=ko
+"""
 
 class StorageAPI:
 
@@ -18,7 +23,8 @@ class StorageAPI:
         #self.bucket = self.storage_client.bucket(bucket_name)
 
     def download_gcs_folder(self, source_folder, destination_folder):
-        """GCS 버킷의 폴더를 로컬 디렉터리로 다운로드합니다.
+        """
+        GCS 버킷의 폴더를 로컬 디렉터리로 다운로드합니다.
 
         Args:
             bucket_name (str): GCS 버킷 이름 (예: 'my-bucket')
@@ -55,6 +61,36 @@ class StorageAPI:
         end_time = time.time()
         print(f'Elapsed time: {(end_time - start_time)}s')
 
+    def download_gcs_folder_concurrently(self, source_folder, destination_folder):
+        """
+        GCS 버킷의 폴더를 로컬 디렉터리로 다운로드합니다.
+
+        Args:
+            bucket_name (str): GCS 버킷 이름 (예: 'my-bucket')
+            source_folder (str): 다운로드할 GCS 내 폴더 경로 (예: 'data/images/')
+            destination_folder (str): 파일을 저장할 로컬 디렉터리 경로 (예: './downloaded_images')
+        """
+        
+        start_time = time.time()
+        # 지정된 폴더(prefix)에 있는 모든 blob(파일) 목록 가져오기ß
+        blobs = self.bucket.list_blobs(prefix=source_folder)
+
+        # 로컬에 저장할 디렉터리가 없으면 생성
+        if not os.path.exists(destination_folder):
+            os.makedirs(destination_folder)
+            print(f"'{destination_folder}' 디렉터리를 생성했습니다.")
+
+        print(f"'{source_folder}' 폴더를 '{destination_folder}'(으)로 다운로드 시작.")
+        for blob in blobs:
+            # 다운로드할 파일의 전체 로컬 경로 생성
+            # blob.name은 'data/images/cat.jpg'와 같은 전체 경로입니다.
+            destination_path = os.path.join(destination_folder, os.path.basename(blob.name))
+
+            self.download_chunks_concurrently(blob.name, destination_path)
+        
+        end_time = time.time()
+        print(f'Elapsed time: {(end_time - start_time)}s')
+
     def download_folder(self, folder, dest_dir):
         workers=8
         max_results=1000
@@ -83,6 +119,7 @@ class StorageAPI:
     ):
         """
         Download a single file in chunks, concurrently in a process pool.
+        https://cloud.google.com/run/docs/configuring/services/gpu-best-practices?hl=ko
         https://cloud.google.com/storage/docs/samples/storage-transfer-manager-download-chunks-concurrently?hl=ko
         """
 
@@ -112,7 +149,35 @@ class StorageAPI:
             blob, filename, chunk_size=chunk_size, max_workers=workers
         )
 
-        print("Downloaded {} to {}.".format(blob_name, filename))
+        print("Downloaded {}.".format(filename))
+
+    def download_blob_to_stream(self, source_blob_name, file_obj):
+        """
+        Downloads a blob to a stream or other file-like object.
+        https://cloud.google.com/storage/docs/samples/storage-stream-file-download?hl=ko
+        """
+
+        # The ID of your GCS bucket
+        # bucket_name = "your-bucket-name"
+
+        # The ID of your GCS object (blob)
+        # source_blob_name = "storage-object-name"
+
+        # The stream or file (file-like object) to which the blob will be written
+        # import io
+        # file_obj = io.BytesIO()
+
+        # Construct a client-side representation of a blob.
+        # Note `Bucket.blob` differs from `Bucket.get_blob` in that it doesn't
+        # retrieve metadata from Google Cloud Storage. As we don't use metadata in
+        # this example, using `Bucket.blob` is preferred here.
+        blob = self.bucket.blob(source_blob_name)
+        blob.download_to_file(file_obj)
+
+        print(f"Downloaded blob {source_blob_name} to file-like object.")
+
+        return file_obj
+        # Before reading from file_obj, remember to rewind with file_obj.seek(0).
 
 if __name__ == "__main__":
     # .env 파일 로드

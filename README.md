@@ -1,17 +1,22 @@
-# Gemma 3 Fine-tuning in GCE + GPU, TPU, Cloud Run + GPU, GKE + TPU
+# Gemma 3 Fine-tuning
 
-대규모 언어 모델(Large Language Models, LLM)은 수천억 개의 파라미터를 가진 파운데이션 모델(Foundation Model)으로 방대한 양의 텍스트 데이터로 사전 학습(pre-training)되어 광범위한 언어적 지식과 추론 능력을 갖춘 거대 모델을 기반이다. 
-Fine tuning은 이를 특정 목적에 맞게 미세하게 조정하는 방식을 채택하고 있다. 
+- Fine-tuning Gemma 3 models in GCE + GPU or TPU 
+- Fine-tuning Gemma 3 models in Apple Silicon
+- Fine-tuning Gemma 3 models in GKE + TPU
+- Inferencing from Fine-tuned models in Cloud Run + GPU
 
-이 새로운 패러다임의 중심에는 지도 미세조정(Supervised Fine-Tuning, SFT) 이라는 강력한 기술이 자리 잡고 있다. 
-예를 들어, 일반적인 대화가 가능한 LLM을 법률 문서 분석, 의료 상담, 혹은 특정 기업의 내부 정책에 대한 질의응답 시스템으로 변모시키는 과정의 핵심이 바로 SFT이다. 
-이 과정을 통해 모델의 응답 정확성과 신뢰도를 높이고, 사용자의 구체적인 요구사항을 충족시킴으로써 LLM의 실질적인 가치를 극대화할 수 있다.
+대규모 언어 모델(Large Language Models, LLM)은 수천억 개의 파라미터를 가진 파운데이션 모델(Foundation Model)으로 방대한 양의 텍스트 데이터로 사전 학습(pre-training)되어 광범위한 언어적 지식과 추론 능력을 갖춘 거대 모델을 기반입니다. 
+Fine tuning은 이를 특정 목적에 맞게 미세하게 조정하는 방식을 채택하고 있습니다. 
+
+이 새로운 패러다임의 중심에는 **지도 미세조정(Supervised Fine-Tuning, SFT)** 이라는 강력한 기술이 자리 잡고 있습니다. 
+예를 들어, 일반적인 대화가 가능한 LLM을 법률 문서 분석, 의료 상담, 혹은 특정 기업의 내부 정책에 대한 질의응답 시스템으로 변모시키는 과정의 핵심이 바로 SFT입니다. 
+이 과정을 통해 모델의 응답 정확성과 신뢰도를 높이고, 사용자의 구체적인 요구사항을 충족시킴으로써 LLM의 실질적인 가치를 극대화할 수 있습니다.
 
 ##### SFT (Supervised Fine-Tuning)
 
-지도 미세조정(Supervised Fine-Tuning, SFT)은 이미 방대한 양의 비정형 텍스트 데이터로 사전 학습(pre-trained)을 마친 언어 모델을, 특정 작업(task)에 특화시키기 위해 레이블이 지정된(labeled) 데이터셋으로 추가 학습을 진행하는 지도 학습(supervised learning) 기반의 최적화 기법이다.
+지도 미세조정(Supervised Fine-Tuning, SFT)은 이미 방대한 양의 비정형 텍스트 데이터로 사전 학습(pre-trained)을 마친 언어 모델을, 특정 작업(task)에 특화시키기 위해 레이블이 지정된(labeled) 데이터셋으로 추가 학습을 진행하는 지도 학습(supervised learning) 기반의 최적화 기법입니다.
 사전 학습을 통해 모델이 언어의 일반적인 문법, 의미, 문맥, 그리고 세상에 대한 상식까지 습득했다면,
-SFT는 이 지식을 바탕으로 특정 질문에 어떻게 대답해야 하는지, 혹은 특정 지시를 어떻게 수행해야 하는지 구체적인 '행동 양식'을 가르치는 과정이라 할 수 있다.
+SFT는 이 지식을 바탕으로 특정 질문에 어떻게 대답해야 하는지, 혹은 특정 지시를 어떻게 수행해야 하는지 구체적인 '행동 양식'을 가르치는 과정이라 할 수 있습니다.
 
 #### Gemma 3
 

@@ -29,6 +29,7 @@ class Gemma3API:
             ).to(self.device)
         elif model_type == "product":
             # Load Model with PEFT adapter
+            self.tokenizer = AutoTokenizer.from_pretrained(model_id)
             self.model = AutoModelForImageTextToText.from_pretrained(
                 model_id,
                 device_map="auto",
@@ -78,7 +79,7 @@ class Gemma3API:
     def generate_sql(self, prompt, max_tokens):
         """
         """
-
+        
         # Hugging Face Chat Template 사용
         # Convert as test example into a prompt with the Gemma template
         stop_token_ids = [self.tokenizer.eos_token_id, self.tokenizer.convert_tokens_to_ids("<end_of_turn>")]

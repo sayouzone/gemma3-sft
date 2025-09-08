@@ -5,6 +5,7 @@ Hugging Face 모델을 Google Cloud Storage(GCS)에서 직접 로드하려면 mo
 Google Cloud Storage(GCS)에서 Volume Mount를 통해서 모델 로딩하는 방법
 
 - [Cloud Run에서 Gemma 3 실행](https://cloud.google.com/run/docs/run-gemma-on-cloud-run?hl=ko)
+- [권장사항: GPU를 사용하는 Cloud Run의 AI 추론](https://cloud.google.com/run/docs/configuring/services/gpu-best-practices?hl=ko)
 - [Google Cloud Storage Volume Mount](https://cloud.google.com/run/docs/configuring/services/cloud-storage-volume-mounts?hl=ko#mount-volume)
 
 ## 프로젝트 구조 설정
@@ -141,6 +142,8 @@ SERVICE_URL=$(gcloud run services describe $PRODUCT_IMAGE_NAME --region $REGION 
 curl -X POST "${SERVICE_URL}/generate" \
 -H "Content-Type: application/json" \
 -d '{"type": "text", "prompt": "Google Cloud Run의 장점은 무엇인가요?", "max_tokens": 150}'
+
+"user\nGoogle Cloud Run의 장점은 무엇인가요?\nmodel\nGoogle Cloud Run은 서버리스 앱 실행을 쉽게 하는 서버리스 플랫폼입니다. 기존 이식 코드와 최소 간섭으로 실행될 수 있으며, 구글 클라우드 네트워크에서 자동으로 확장 및 운영됩니다. 이를 통해 빠른 개발과 생산성 개선을 기대할 수 있습니다."
 ```
 
 ```bash
@@ -148,7 +151,7 @@ curl -X POST "${SERVICE_URL}/generate" \
 -H "Content-Type: application/json" \
 -d '{"type": "product", "prompt": "test", "max_tokens": 1000}'
 
-"user\nGiven the <USER_QUERY> and the <SCHEMA>, generate the corresponding SQL command to retrieve the desired data, considering the query's syntax, semantics, and schema constraints.\n\n<SCHEMA>\nCREATE TABLE Donor (DonorID int, DonorName varchar(50), Country varchar(50)); INSERT INTO Donor VALUES (1, 'John Smith', 'USA'), (2, 'Jane Smith', 'Canada');\n</SCHEMA>\n\n<USER_QUERY>\nWhat is the total amount donated by each donor in the US?\n</USER_QUERY>\nmodel\nSELECT DonorName, SUM(DonationAmount) as TotalDonated FROM Donor JOIN Donation ON Donor.DonorID = Donation.DonorID WHERE Country = 'USA' GROUP BY DonorName;\nmodel\nSELECT DonorName, SUM(DonationAmount) as TotalDonated FROM Donor JOIN Donation ON Donor.DonorID = Donation.DonorID WHERE Country = 'USA' GROUP BY DonorName;"
+"Avengers Assemble Titan Hero Iron Man Action Figure: Raise your Avengers game to Titan proportion with this colossal 30.5 cm Iron Man figure! Part of the acclaimed Marvel Assemble Titan Hero Series, this detailed action figure is perfect for fans of all ages. Collect all the Titan Hero figures to recreate your favourite Avengers scenes!"
 ```
 
 ## Fine-tuned Model 폴더
@@ -156,7 +159,17 @@ curl -X POST "${SERVICE_URL}/generate" \
 ```bash
 gs://ayouzone-ai-gemma3/gce-us-central1/gemma-3-4b-product_merged_model/
 ├── config.json
-├── model.safetensors
+├── model-00001-of-00010.safetensors
+├── model-00002-of-00010.safetensors
+├── model-00003-of-00010.safetensors
+├── model-00004-of-00010.safetensors
+├── model-00005-of-00010.safetensors
+├── model-00006-of-00010.safetensors
+├── model-00007-of-00010.safetensors
+├── model-00008-of-00010.safetensors
+├── model-00009-of-00010.safetensors
+├── model-00010-of-00010.safetensors
+├── model.safetensors.index.json
 ├── special_tokens_map.json
 ├── tokenizer_config.json
 ├── tokenizer.json
@@ -165,7 +178,7 @@ gs://ayouzone-ai-gemma3/gce-us-central1/gemma-3-4b-product_merged_model/
 
 ## Errors
 
-#### IAM Role Error
+#### IAM Role Errors
 
 ```bash
 ERROR: (gcloud.builds.submit) PERMISSION_DENIED: The caller does not have permission. This command is authenticated as sjkim@sayouzone.com which is the active account specified by the [core/account] property
@@ -244,7 +257,7 @@ export MOUNT_PATH="/mnt/model"
 ValueError: Unrecognized model in /mnt/model. Should have a `model_type` key in its config.json, or contain one of the following strings in its name: aimv2, aimv2_vision_model, albert, align, altclip, apertus, arcee, aria, aria_text, audio-spectrogram-transformer, autoformer, aya_vision, bamba, bark, bart, beit, bert, bert-generation, big_bird, bigbird_pegasus, biogpt, bit, bitnet, blenderbot, blenderbot-small, blip, blip-2, blip_2_qformer, bloom, bridgetower, bros, camembert, canine, chameleon, chinese_clip, chinese_clip_vision_model, clap, clip, clip_text_model, clip_vision_model, clipseg, clvp, code_llama, codegen, cohere, cohere2, cohere2_vision, colpali, colqwen2, conditional_detr, convbert, convnext, convnextv2, cpmant, csm, ctrl, cvt, d_fine, dab-detr, dac, data2vec-audio, data2vec-text, data2vec-vision, dbrx, deberta, deberta-v2, decision_transformer, deepseek_v2, deepseek_v3, deepseek_vl, deepseek_vl_hybrid, deformable_detr, deit, depth_anything, depth_pro, deta, detr, dia, diffllama, dinat, dinov2, dinov2_with_registers, dinov3_convnext, dinov3_vit, distilbert, doge, donut-swin, dots1, dpr, dpt, efficientformer, efficientloftr, efficientnet, electra, emu3, encodec, encoder-decoder, eomt, ernie, ernie4_5, ernie4_5_moe, ernie_m, esm, evolla, exaone4, falcon, falcon_h1, falcon_mamba, fastspeech2_conformer, fastspeech2_conformer_with_hifigan, flaubert, flava, florence2, fnet, focalnet, fsmt, funnel, fuyu, gemma, gemma2, gemma3, gemma3_text, gemma3n, gemma3n_audio, gemma3n_text, gemma3n_vision, git, glm, glm4, glm4_moe, glm4v, glm4v_moe, glm4v_moe_text, glm4v_text, glpn, got_ocr2, gpt-sw3, gpt2, gpt_bigcode, gpt_neo, gpt_neox, gpt_neox_japanese, gpt_oss, gptj, gptsan-japanese, granite, granite_speech, granitemoe, granitemoehybrid, granitemoeshared, granitevision, graphormer, grounding-dino, groupvit, helium, hgnet_v2, hiera, hubert, hunyuan_v1_dense, hunyuan_v1_moe, ibert, idefics, idefics2, idefics3, idefics3_vision, ijepa, imagegpt, informer, instructblip, instructblipvideo, internvl, internvl_vision, jamba, janus, jetmoe, jukebox, kosmos-2, kosmos-2.5, kyutai_speech_to_text, layoutlm, layoutlmv2, layoutlmv3, led, levit, lfm2, lightglue, lilt, llama, llama4, llama4_text, llava, llava_next, llava_next_video, llava_onevision, longformer, longt5, luke, lxmert, m2m_100, mamba, mamba2, marian, markuplm, mask2former, maskformer, maskformer-swin, mbart, mctct, mega, megatron-bert, metaclip_2, mgp-str, mimi, minimax, mistral, mistral3, mixtral, mlcd, mllama, mm-grounding-dino, mobilebert, mobilenet_v1, mobilenet_v2, mobilevit, mobilevitv2, modernbert, modernbert-decoder, moonshine, moshi, mpnet, mpt, mra, mt5, musicgen, musicgen_melody, mvp, nat, nemotron, nezha, nllb-moe, nougat, nystromformer, olmo, olmo2, olmoe, omdet-turbo, oneformer, open-llama, openai-gpt, opt, ovis2, owlv2, owlvit, paligemma, patchtsmixer, patchtst, pegasus, pegasus_x, perceiver, perception_encoder, perception_lm, persimmon, phi, phi3, phi4_multimodal, phimoe, pix2struct, pixtral, plbart, poolformer, pop2piano, prompt_depth_anything, prophetnet, pvt, pvt_v2, qdqbert, qwen2, qwen2_5_omni, qwen2_5_vl, qwen2_5_vl_text, qwen2_audio, qwen2_audio_encoder, qwen2_moe, qwen2_vl, qwen2_vl_text, qwen3, qwen3_moe, rag, realm, recurrent_gemma, reformer, regnet, rembert, resnet, retribert, roberta, roberta-prelayernorm, roc_bert, roformer, rt_detr, rt_detr_resnet, rt_detr_v2, rwkv, sam, sam2, sam2_hiera_det_model, sam2_video, sam2_vision_model, sam_hq, sam_hq_vision_model, sam_vision_model, seamless_m4t, seamless_m4t_v2, seed_oss, segformer, seggpt, sew, sew-d, shieldgemma2, siglip, siglip2, siglip_vision_model, smollm3, smolvlm, smolvlm_vision, speech-encoder-decoder, speech_to_text, speech_to_text_2, speecht5, splinter, squeezebert, stablelm, starcoder2, superglue, superpoint, swiftformer, swin, swin2sr, swinv2, switch_transformers, t5, t5gemma, table-transformer, tapas, textnet, time_series_transformer, timesfm, timesformer, timm_backbone, timm_wrapper, trajectory_transformer, transfo-xl, trocr, tvlt, tvp, udop, umt5, unispeech, unispeech-sat, univnet, upernet, van, video_llava, videomae, vilt, vipllava, vision-encoder-decoder, vision-text-dual-encoder, visual_bert, vit, vit_hybrid, vit_mae, vit_msn, vitdet, vitmatte, vitpose, vitpose_backbone, vits, vivit, vjepa2, voxtral, voxtral_encoder, wav2vec2, wav2vec2-bert, wav2vec2-conformer, wavlm, whisper, xclip, xcodec, xglm, xlm, xlm-prophetnet, xlm-roberta, xlm-roberta-xl, xlnet, xlstm, xmod, yolos, yoso, zamba, zamba2, zoedepth
 ```
 
-#### Startup probe Error
+#### Startup probe Errors
 
 ```bash
 ERROR: (gcloud.run.deploy) Revision 'gemma3-product-ft-service-00001-8sb' is not ready and cannot serve traffic. Container failed to become healthy. Startup probes timed out after 4m (1 attempts with a timeout of 4m each). There was an initial delay of 0s. If this happens frequently, consider adjusting the probe settings.

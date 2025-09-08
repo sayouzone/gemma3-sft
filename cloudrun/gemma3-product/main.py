@@ -33,36 +33,20 @@ async def lifespan(app: FastAPI):
     #ml_models["answer_to_everything"] = fake_answer_to_everything_ml_model
 
     current_dir = os.path.dirname(os.path.realpath(__file__))
-    print("current_dir", current_dir)
-
-    #app_home = os.environ.get("APP_HOME")
-    #print("APP_HOME", app_home)
-
-    #if not app_home:
-    #    os.environ["APP_HOME"] = current_dir
+    print("Current Directory:", current_dir)
 
     storage_api = storageapi.StorageAPI(ft_gcs_bucket)
     #storage_api.download_folder(ft_gcs_path, ft_local_path)
-    storage_api.download_gcs_folder(ft_gcs_path, ft_local_path)
+    #storage_api.download_gcs_folder(ft_gcs_path, ft_local_path)
+    storage_api.download_gcs_folder_concurrently(ft_gcs_path, ft_local_path)
 
     dir_list = os.listdir(ft_local_path)
     for item in dir_list:
-        print(item)
+        print("item", item)
 
-    #config_name = os.environ.get("config", "prd_extern")
-    #prop = properties.Properties()
-    #prop.load_config(config_name, ['postgresql', 'openai','model','azure_openai'])
-    #print('prop', prop)
-
-    #args = common.make_args("hyd")
-    #print('args', args, type(args), flush=True)
-
-    #get_retriever(args, prop)
-
-    # 1. model_id를 GCS 경로로 설정
+    # model_id를 GCS에서 다운로드한 로컬 경로로 설정
     # 모델과 토크나이저를 전역적으로 로드 (앱 시작 시 한 번만 실행)
     #model_id = "google/gemma-3-1b-it"  # 예: "google/gemma-3-9b-it" 또는 GCS 경로
-    #model_id = "gs://sayouzone-ai-gemma3/gce-us-central1/gemma-3-1b_merged_model"
     model_id = ft_local_path
     print("model_id", model_id)
     app.state.model_id = model_id
@@ -73,7 +57,6 @@ async def lifespan(app: FastAPI):
     # Clean up the ML models and release the resources
     #ml_models.clear()
     
-    #clear_retriever()
     print("sub shutdown")
 
 # FastAPI 앱 초기화
