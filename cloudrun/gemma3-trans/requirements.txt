@@ -1,20 +1,18 @@
+# requirements.txt
+fastapi
+uvicorn
 python-dotenv
-pillow
-protobuf
 
 torch
-datasets
+torchvision
 transformers
 accelerate
 bitsandbytes
 sentencepiece
-peft
-trl
-
-tensorboard
-torchvision
-
 evaluate
 
+pillow
+protobuf
+
 google-auth
-google-cloud-secret-manager
+google-cloud-storage

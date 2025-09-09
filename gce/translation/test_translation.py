@@ -25,11 +25,12 @@ Translate the following text from English to Korean.
 """
 
     inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    print("inputs", inputs)
+    #print("inputs", inputs)
     outputs = model.generate(**inputs, max_new_tokens=len(text) * 3, eos_token_id=tokenizer.eos_token_id)
-    print("outputs", outputs)
+    #print("outputs", outputs)
     #result = tokenizer.decode(outputs, skip_special_tokens=True)
     result = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    print("result", result)
     response_part = result.split("### Response:")
     return response_part
 
