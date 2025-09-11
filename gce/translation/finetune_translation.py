@@ -65,6 +65,59 @@ def login_huggingface(hf_token):
     else:
         print("HF_TOKEN environment variable not found.")
 
+def translation_prompt(data):
+    """데이터셋 샘플을 명령어 형식의 프롬프트로 변환하는 함수"""
+    user_prompt = """### Instruction:
+Translate the following text from English to Korean.
+
+### Input:
+{english_sentence}
+
+### Response:
+{korean_sentence}"""
+
+    return {
+        "text": user_prompt.format(english_sentence=data['english'], korean_sentence=data['korean'])
+    }
+
+def translation_genre_prompt(data):
+    """데이터셋 샘플을 명령어 형식의 프롬프트로 변환하는 함수"""
+    user_prompt = """### Instruction:
+Translate the following text from English to Korean as {genre} genre.
+
+### Input:
+{english_sentence}
+
+### Response:
+{korean_sentence}"""
+
+    return {
+        "text": user_prompt.format(
+            genre=data['genre'],
+            english_sentence=data['english'],
+            korean_sentence=data['korean']
+        )
+    }
+
+def translate_en_to_ko(model, tokenizer, text):
+    prompt = f"""### Instruction:
+Translate the following text from English to Korean.
+
+### Input:
+{text}
+
+### Response:
+"""
+
+    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    #print("inputs", inputs)
+    outputs = model.generate(**inputs, max_new_tokens=len(text) * 3, eos_token_id=tokenizer.eos_token_id)
+    #print("outputs", outputs)
+    #result = tokenizer.decode(outputs, skip_special_tokens=True)
+    result = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    response_part = result.split("### Response:")
+    return response_part
+
 hf_token = get_hf_token(hf_token_secret_id)
 print("HF_TOKEN", hf_token)
 os.environ["HF_TOKEN"] = hf_token
@@ -100,23 +153,9 @@ raw_dataset = load_dataset(dataset_name, split="train")
 # 훈련 시간을 줄이기 위해 작은 서브셋으로 테스트 (실제 훈련 시에는 전체 데이터 사용)
 # raw_dataset = raw_dataset.shuffle(seed=42).select(range(10000))
 
-def create_translation_prompt(data):
-    """데이터셋 샘플을 명령어 형식의 프롬프트로 변환하는 함수"""
-    user_prompt = """### Instruction:
-Translate the following text from English to Korean.
-
-### Input:
-{english_sentence}
-
-### Response:
-{korean_sentence}"""
-
-    return {
-        "text": user_prompt.format(english_sentence=data['english'], korean_sentence=data['korean'])
-    }
-
 #.map()을 사용하여 전체 데이터셋에 프롬프트 형식 적용
-formatted_dataset = raw_dataset.map(create_translation_prompt, num_proc=4, remove_columns=raw_dataset.column_names)
+formatted_dataset = raw_dataset.map(translation_prompt, num_proc=4, remove_columns=raw_dataset.column_names)
+#formatted_dataset = raw_dataset.map(translation_genre_prompt, num_proc=4, remove_columns=raw_dataset.column_names)
 #formatted_dataset = formatted_dataset.shuffle().select(range(1500))
 print("Dataset formatted.")
 #print(f"Sample formatted prompt:\n{formatted_dataset['text']}")
@@ -170,6 +209,9 @@ print("Starting training...")
 trainer.train()
 print("Training completed.")
 
+# Save the final model again to the Hugging Face Hub
+#trainer.save_model()
+
 # --- 6. 모델 저장 및 병합 ---
 print("Saving final adapter and merging...")
 #final_adapter_path = os.path.join(output_dir, "final_adapter")
@@ -187,7 +229,6 @@ tokenizer.save_pretrained(merged_model_path)
 print(f"Adapter saved to '{final_adapter_path}'")
 print(f"Merged model saved to '{merged_model_path}'")
 
-
 # 메모리 정리
 del model, peft_model, merged_model, trainer
 torch.cuda.empty_cache() # MPS에서는 torch.mps.empty_cache()
@@ -203,25 +244,6 @@ loaded_model = AutoModelForCausalLM.from_pretrained(
     device_map="auto"
 )
 loaded_tokenizer = AutoTokenizer.from_pretrained(merged_model_path)
-
-def translate_en_to_ko(model, tokenizer, text):
-    prompt = f"""### Instruction:
-Translate the following text from English to Korean.
-
-### Input:
-{text}
-
-### Response:
-"""
-
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
-    #print("inputs", inputs)
-    outputs = model.generate(**inputs, max_new_tokens=len(text) * 3, eos_token_id=tokenizer.eos_token_id)
-    #print("outputs", outputs)
-    #result = tokenizer.decode(outputs, skip_special_tokens=True)
-    result = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    response_part = result.split("### Response:")
-    return response_part
 
 # 테스트 문장
 test_sentence = "The ability to fine-tune powerful language models on consumer hardware is a significant breakthrough for the AI community."

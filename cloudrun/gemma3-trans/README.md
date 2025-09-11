@@ -109,7 +109,7 @@ curl -X POST "${SERVICE_URL}/generate" \
 -H "Content-Type: application/json" \
 -d '{"type": "text", "prompt": "Google Cloud Run의 장점은 무엇인가요?", "max_tokens": 1024}'
 
-"user\nGoogle Cloud Run의 장점은 무엇인가요?\nmodel\nGoogle Cloud Run으로 웹서비스를 배포하고 운영하는 것의 장점은 다음과 같습니다: 1. 확장성과 무한대스케일링: Google Cloud Run은 자동 스케일링이 가능하여 트래픽 요구사항에 따라 서버 인원을 증가 또는 감소시킬 수 있어 확장성과 무한대스케일링이 가능합니다. 2. 로드밸런싱 및 SSL 인증: Google Cloud Run은 자동으로 로드밸런싱과 SSL 인증을 관리하여 안정적인 서비스 제공을 보장합니다. 3. 저준비금액정책: 비용 효율적입니다. 배포 시 불필요한 자원이 사용될 경우 이를 자동으로 감축하여 비용을 관리합니다. 4. 자동확장성: 트래픽 요구사항 변화에 따라 자동으로 서비스 인원을 확장하거나 감소시켜 긴장을 관리할 수 있습니다. 5. 지속가능한 개발방법: 개발자가 코드 작성과 테스트 및 배포를 간소화할 수 있는 지속가능한 개발방법을 제공합니다. 이러한 장점들은 Google Cloud Run이 현대 웹서비스 발리다시 위해 탁월한 선택임을 보여줍니다."
+"user\nGoogle Cloud Run의 장점은 무엇인가요?\nmodel\nGoogle Cloud Run의 주요 장점은 다음과 같습니다.\n\n*   **코드를 코드로 실행:** Cloud Run은 서버를 직접 관리할 필요가 없으므로 개발자는 코드에 집중하고 코드를 실행하는 데 시간을 낭비할 필요가 없습니다.\n*   **자동 스케일링:** Cloud Run은 트래픽에 따라 자동으로 확장되므로 개발자는 트래픽 변동에 대비하여 인프라를 관리할 필요가 없습니다.\n*   **자동 업데이트:** Cloud Run은 코드를 수동으로 업데이트할 필요가 없으므로 개발자는 코드 업데이트에 집중하고 업데이트 시간을 낭비할 필요가 없습니다.\n*   **유연한 배포:** Cloud Run은 컨테이너 이미지를 사용하여 배포할 수 있으므로 개발자는 기존 인프라와 호환되는 컨테이너를 사용하여 배포할 수 있습니다.\n*   **비용 효율적:** Cloud Run은 사용한 리소스에 대해서만 비용을 지불하므로 개발자는 불필요한 리소스를 비용에 추가할 필요가 없습니다.\n\n전반적으로 Google Cloud Run은 클라우드 네이티브 애플리케이션을 신속하고 효율적으로 배포하고 실행하는 데 이상적인 선택입니다. 이를 통해 개발자는 애플리케이션 개발에 집중하고 운영 관리에 대한 시간을 절약할 수 있습니다."
 ```
 
 ```bash
@@ -117,29 +117,25 @@ curl -X POST "${SERVICE_URL}/generate" \
 -H "Content-Type: application/json" \
 -d '{"type": "product", "prompt": "test", "max_tokens": 1000}'
 
-"Avengers Assemble Titanheld Iron Man Actionfigur: 30.5 cm große Iron Man Figur, ideal für sammelnden Fans. Hasbro Marvel Avengers Serie.  Diese Titanheld Iron Man Figur ist ein Muss für jeden Marvel Avengers Collector! Mit ihrer hohen Qualität und detaillierten Gestaltung ist sie ein perfektes Geschenk für Kinder und erwachsene Fans.  Für weiteren Marvel Avengers Enthusiasmus kaufen Sie diese großartige Titanheld Iron Man Figur heute!"
+null
 ```
 
-## 
+## Fine-tuned model
+
 
 ```bash
-gs://ayouzone-ai-gemma3/gce-us-central1/gemma-3-4b-product_merged_model/
+gs://sayouzone-ai-gemma3/gce-us-central1/gemma-3-4b-en-ko-trans_merged_model
+├── added_tokens.json
+├── chat_template.jinja
 ├── config.json
-├── model-00001-of-00010.safetensors
-├── model-00002-of-00010.safetensors
-├── model-00003-of-00010.safetensors
-├── model-00004-of-00010.safetensors
-├── model-00005-of-00010.safetensors
-├── model-00006-of-00010.safetensors
-├── model-00007-of-00010.safetensors
-├── model-00008-of-00010.safetensors
-├── model-00009-of-00010.safetensors
-├── model-00010-of-00010.safetensors
+├── generation_config.json
+├── model-00001-of-00002.safetensors
+├── model-00002-of-00002.safetensors
 ├── model.safetensors.index.json
 ├── special_tokens_map.json
-├── tokenizer_config.json
 ├── tokenizer.json
-└── ...
+├── tokenizer.model
+└──tokenizer_config.json
 ```
 
 ## Errors

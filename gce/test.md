@@ -1,192 +1,39 @@
 #
 
-Ubuntu 24.04 LTS Minimal
-x86/64, amd64 noble minimal image
-500GB
-
-## 초기 환경 설정
-
-#### Ubuntu 환경 설정
-
-```bash
-sudo apt update
-sudo apt -y upgrade
-sudo apt install -y build-essential zlib1g-dev libncurses5-dev libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev libsqlite3-dev wget libbz2-dev
-sudo apt install -y nano screen
-```
-
-NVIDIA 드라이버 설치 후 재부팅
-
-```bash
-sudo apt update
-sudo apt upgrade
-sudo ubuntu-drivers autoinstall
-sudo reboot
-
-nvidia-smi
-```
-
-```bash
-Sun Aug 17 23:21:13 2025       
-+-----------------------------------------------------------------------------------------+
-| NVIDIA-SMI 575.64.03              Driver Version: 575.64.03      CUDA Version: 12.9     |
-|-----------------------------------------+------------------------+----------------------+
-| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
-| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
-|                                         |                        |               MIG M. |
-|=========================================+========================+======================|
-|   0  Tesla T4                       Off |   00000000:00:04.0 Off |                    0 |
-| N/A   52C    P8             10W /   70W |       0MiB /  15360MiB |      0%      Default |
-|                                         |                        |                  N/A |
-+-----------------------------------------+------------------------+----------------------+
-                                                                                         
-+-----------------------------------------------------------------------------------------+
-| Processes:                                                                              |
-|  GPU   GI   CI              PID   Type   Process name                        GPU Memory |
-|        ID   ID                                                               Usage      |
-|=========================================================================================|
-|  No running processes found                                                             |
-+-----------------------------------------------------------------------------------------+
-```
-
-#### Python 환경 설정
-
-**Python 3.12 Ubuntu 패키지 설치**
-
-```bash
-sudo apt install -y python3.12 python3-pip python3-venv
-```
-
-**Python 3.12 수작업 설치**
-
-```bash
-wget https://www.python.org/ftp/python/3.12.0/Python-3.12.0.tar.xz  # 또는 최신 버전 다운로드
-tar -xf Python-3.12.0.tar.xz
-
-cd Python-3.12.0
-./configure --enable-optimizations
-make -j 8  # CPU 코어 수에 맞게 조정
-sudo make altinstall
-
-python3 --version
-python --version
-pip --version
-```
-
-#### Virtual Environment 설정
-
-```bash
-python3 -m venv gemma3-env
-source gemma3-env/bin/activate
-```
-
-```bash
-mkdir gemma3
-cd gemma3
-```
-
-##
-
-#### VM instances 목록
-
-```bash
-gcloud compute instances list --project sayouzone-ai
-```
-
-```bash
-NAME                 ZONE           MACHINE_TYPE   PREEMPTIBLE  INTERNAL_IP  EXTERNAL_IP  STATUS
-gemma3-g2s4-l4-test  us-central1-c  g2-standard-4               10.128.0.2                TERMINATED
-```
-
-#### VM instance 생성
-
-```bash
-PROJECT_ID=sayouzone-ai
-INSTANCE_NAME=gemma3-g2s4-l4-test
-REGION=us-central1
-ZONE=us-central1-c
-BUCKET_NAME=sayouzone-ai-gemma3
-```
-
-#### VM instance 시작
-
-```bash
-gcloud compute instances start $INSTANCE_NAME \
-    --project=$PROJECT_ID \
-    --zone=$ZONE
-```
-
-#### VM instance 중지
-
-```bash
-gcloud compute instances stop $INSTANCE_NAME \
-    --project=$PROJECT_ID \
-    --zone=$ZONE
-```
-
-**전체 파일 복사**
-
-```bash
-gcloud storage cp "gs://sayouzone-ai-gemma3/gce-us-central1/*" .
-
-gcloud storage cp * gs://sayouzone-ai-gemma3/gce-us-central1/
-```
-
-**일부 파일 복사**
-
-```bash
-gcloud storage cp "gs://sayouzone-ai-gemma3/gce-us-central1/*.py" .
-
-gcloud storage cp *.py gs://sayouzone-ai-gemma3/gce-us-central1/
-gcloud storage cp requirements.txt gs://sayouzone-ai-gemma3/gce-us-central1/
-```
-
-```bash
-pip install -r requirements.txt
-```
-
-.env 파일 생성
-
-```text
-HF_TOKEN=YOUR_HUGGINGFACE_TOKEN
-```
-
-#### Datasets
-
-Synthetic Text-to-SQL dataset consisting of 105,851 high-quality records across 100 diverse domains, designed for training language models. 
-
-[philschmid/gretel-synthetic-text-to-sql](https://huggingface.co/datasets/philschmid/gretel-synthetic-text-to-sql)
-
-| id (int32) | domain (string) | domain_description (string) | sql_complexity (string) | sql_complexity_description (string) | sql_task_type (string) | sql_task_type_description (string) | sql_prompt (string) | sql_context (string) | sql (string) | sql_explanation (string) |
-|------|------|------|------|------|------|------|------|------------|------|------|
-| 5,097 | forestry | Comprehensive data on sustainable forest management, timber production, wildlife habitat, and carbon sequestration in forestry. | single join | only one join (specify inner, outer, cross) | analytics and reporting | generating reports, dashboards, and analytical insights | What is the total volume of timber sold by each salesperson, sorted by salesperson? | CREATE TABLE salesperson (salesperson_id INT, name TEXT, region TEXT); INSERT INTO salesperson (salesperson_id, name, region) VALUES (1, 'John Doe', 'North'), (2, 'Jane Smith', 'South'); CREATE TABLE timber_sales (sales_id INT, salesperson_id INT, volume REAL, sale_date DATE); INSERT INTO timber_sales (sales_id, salesperson_id, volume, sale_date) VALUES (1, 1, 120, '2021-01-01'), (2, 1, 150, '2021-02-01'), (3, 2, 180, '2021-01-01'); | SELECT salesperson_id, name, SUM(volume) as total_volume FROM timber_sales JOIN salesperson ON timber_sales.salesperson_id = salesperson.salesperson_id GROUP BY salesperson_id, name ORDER BY total_volume DESC; | Joins timber_sales and salesperson tables, groups sales by salesperson, calculates total volume sold by each salesperson, and orders the results by total volume in descending order. |
-| 5,098 | defense industry | Defense contract data, military equipment maintenance, threat intelligence metrics, and veteran employment stats. | aggregation | aggregation functions (COUNT, SUM, AVG, MIN, MAX, etc.), and HAVING clause | analytics and reporting | generating reports, dashboards, and analytical insights | List all the unique equipment types and their corresponding total maintenance frequency from the equipment_maintenance table. | CREATE TABLE equipment_maintenance (equipment_type VARCHAR(255), maintenance_frequency INT); | SELECT equipment_type, SUM(maintenance_frequency) AS total_maintenance_frequency FROM equipment_maintenance GROUP BY equipment_type; | This query groups the equipment_maintenance table by equipment_type and calculates the sum of maintenance_frequency for each group, then returns the equipment_type and the corresponding total_maintenance_frequency. |
-
-
-**Amazon Multimodal Product dataset**
-
-[philschmid/amazon-product-descriptions-vlm](https://huggingface.co/datasets/philschmid/amazon-product-descriptions-vlm)
-
-| image (image) | Uniq Id (string) | Product Name (string) | Category (string) | Selling Price (string) | Model Number (string) | About Product (string) | Product Specification (string) | Technical Details (string) | Shipping Weight (string) | Variants (string) | Product Url (string) | Is Amazon Seller (string) | description (string) |
-|-----|-------|---------|-----|-----|-----|-----|-----|-----|-----|-----|-----------|--------|--------|
-| ![1](https://datasets-server.huggingface.co/assets/philschmid/amazon-product-descriptions-vlm/--/f08a021c69c51d6894cfe39206448e7785d6156b/--/default/train/0/image/image.jpg?Expires=1755648845&Signature=QrOz5t2fXjX7p3qGoDDjhw1OY7~pR-otbIUo6HgWPGwqw6zX64K8BPx4mbuinsNALl0UoPZYmf4~gTfr6CRDZ7HUUsQGcTyEA2N6Bbd0a4WJj5uN-3Lyku19HFZRH2PuNk18YeXvcfDU~z31H5qUizn8LAaCuR0glc4UsXvgnvRjeAHR-V94pXikGL6pjQ~aM80iENLePVo~g8~w8AFJuaXvypLn1VR37w7rzos9XHF2aLkML61KL5v2XUBy6rH3NUDOviNb8NRWw8bh5jLQfrpOA~wNMBCcH0r6yorLFUpy91NsuPHWU8yelftypCXo1gW-VfEImASx4k99mni7UA__&Key-Pair-Id=K3EI6M078Z3AC3) | 002e4642d3ead5ecdc9958ce0b3a5a79 | Kurio Glow Smartwatch for Kids with Bluetooth, Apps, Camera & Games, Blue | Toys & Games | Kids' Electronics | Electronic Learning Toys | $31.30 | C17515 | Make sure this fits by entering your model number. | Kurio watch glow is a real Bluetooth Smartwatch built especially for kids, packed with 20+ apps & games! | Get your glow on with new light-up feature that turns games and activities into colorful fun. | Kurio watch glow includes brand-new games with light effects, including the My little dragon virtual pet and color-changing mood sensor. | Play single and two-player games on one watch, Or connect two watches together via Bluetooth, plus motion-sensitive games that get kids moving! | Take fun selfies with the front-facing camera and decorate them with filters, frames and stickers. | Plus, everything you need in a smartwatch – activity tracker, music player, Alarm/stopwatch, calculator, calendar and so much more! | Scratch resistant and splash-proof - suitable for kids ages 4 and up! | ProductDimensions:5x3x12inches|ItemWeight:7.2ounces|ShippingWeight:7.2ounces(Viewshippingratesandpolicies)|ASIN:B07TFD5D55|Itemmodelnumber:C17515|Manufacturerrecommendedage:4yearsandup|Batteries:1LithiumPolymerbatteriesrequired.(included) | Color:Blue show up to 2 reviews by default This sleek, hi-tech Bluetooth Smartwatch is made specifically for kids, and it's packed with apps and games for out-of-the-box fun! Take selfies and videos, play single and two-player games, message friends, listen to music, plus everything you need in a smartwatch– activity tracker, alarm/stopwatch, calculator, calendar and so much more! Plus, parents can add vital information like blood type and allergies to an 'in case of an emergency' (I. C. E. ) app | 7.2 ounces (View shipping rates and policies) | 7.2 ounces | https://www.amazon.com/Kurio-Smartwatch-Bluetooth-Camera-Games/dp/B07TFD5D55|https://www.amazon.com/Kurio-Smartwatch-Bluetooth-Camera-Games/dp/B07TD8JHKW | https://www.amazon.com/Kurio-Smartwatch-Bluetooth-Camera-Games/dp/B07TFD5D55 | Y | Kurio Glow Smartwatch: Fun, Safe & Educational! This kids' smartwatch boasts Bluetooth connectivity, built-in apps & games, and a camera – all in a vibrant blue design. Perfect for learning & play! #kidssmartwatch #kidselectronics #educationaltoys #kurioglow |
-| ![2](https://datasets-server.huggingface.co/assets/philschmid/amazon-product-descriptions-vlm/--/f08a021c69c51d6894cfe39206448e7785d6156b/--/default/train/1/image/image.jpg?Expires=1755648845&Signature=MNQ2lTGJxPWdCxj8OPNC5BoCC2sJFiD~1GeIUjwBBxfvwP2pSwE-bPFZHxlYJ5P7gf0eyk-qfvG91OhUMu0sxLWIWBI4kowD0My3DofdTZ4XMYfGNhQR8IouJnSQd8q2Zpa~EvcTYWGRbcuDN8ve-DKhLJ7QlC0Uhl-rONTvn3pizd94DHUGyY5fqlq7QCEVMeX8lGOSKprfSGGMxG3KEvF~wa1WSsFTGzYgGV8LrW1EAFsPNHTZheOkWYFbCCRqwJWGA0AzYjEsl6WoAhxwY1XJ~iuYygrO8ahiSB9M8GdcFogq59IpZ1e-DQEZlcWKxVcuQlhdGpCUmVoGO30ANg__&Key-Pair-Id=K3EI6M078Z3AC3) | 009359198555dde1543d94568183703c | Star Ace Toys Harry Potter & The Prisoner of Azkaban: Harry Potter with Dobby 1: 8 Scale Collectible Action Figure, Multicolor SA8011B | null | $174.99 | SA8011B | Make sure this fits by entering your model number. | From the classic film | Presents Harry as he appeared in the Prisoner Of Azkaban | Comes with the monster book of monsters, hedwig the owl, the Marauder's map and his wand | Includes a figure of the house Elf Dobby | Figure is in 1: 8 scale | ProductDimensions:2.5x1x9inches|ItemWeight:1.43pounds|ShippingWeight:1.43pounds(Viewshippingratesandpolicies)|ASIN:B07KMXGSXF|Itemmodelnumber:SA8011B|Manufacturerrecommendedage:15yearsandup | From Star Ace Toys. Many fans would say that Harry Potter and the Prisoner Of Azkaban is their favorite film of the series. Directed by alfonso cuarón, this film is darker and more adult than the previous two films. Star ace is proud to present Harry Potter as he appeared in this movie in his Hogwarts school robes. He also comes with the monster book of monsters, Hedwig the owl, the Marauder's map and his wand. This special set also includes the house elf Dobby! | 1.43 pounds (View shipping rates and policies) | 1.43 pounds | null | https://www.amazon.com/Star-Ace-Toys-Prisoner-Azkaban/dp/B07KMXGSXF | Y | Relive the magic! Star Ace Toys' 1/8 scale Harry Potter & Dobby collectible figure (SA8011B) from *Prisoner of Azkaban* is here. Highly detailed, this action figure features Harry and his loyal house-elf, Dobby. A must-have for Harry Potter collectors! |
-| ![3](https://datasets-server.huggingface.co/assets/philschmid/amazon-product-descriptions-vlm/--/f08a021c69c51d6894cfe39206448e7785d6156b/--/default/train/2/image/image.jpg?Expires=1755648845&Signature=Xc3ESJekJbCDEnv0mPoTBrTYFoX2a4e3Nr3ag6G8tESOCzJPNr~AobVDjdlzHGtKFwgF84InjG-ShO~f~S~bvmHMQXzaRZvHai3mh~EZqpNOmI0TIjmg~i7GNbetuGI66aHHr0SI9VFT2dHi05RT1BqZQtwqdCUt5JxSsbcbS6JQPrzF9pPXWAwQleNzc7iB2PYAv3-soawpmGedlfB3kXYSAkEF~kEk6wzcxrKfAGWT9jfESrUE9yDcbtAg07-LHOGzjHJ0KL8Hm2PvYKNmLDsVdloN-498BBk~JdWzkkMX-zhznjgvMFEK8B212-46vD3umVI5UdtP7BxxNtW71A__&Key-Pair-Id=K3EI6M078Z3AC3) | 00cb3b80482712567c2180767ec28a6a | Barbie Fashionistas Doll Wear Your Heart | Toys & Games | Dolls & Accessories | Dolls | $15.99 | FJF44 | Make sure this fits by entering your model number. | Barbie Fashionistas doll loves this outfit -- the pink Sweatshirt dress has a cool "love" typographic with a sheen touch | Boots and a choker complete the look | Her long hair is right on trend in high pigtails | More variety makes collecting Barbie Fashionistas dolls even more fun | Collect them all (each sold separately, subject to availability) | ProductDimensions:2.1x4.5x12.8inches|ItemWeight:4.2ounces|ShippingWeight:4.2ounces(Viewshippingratesandpolicies)|DomesticShipping:ItemcanbeshippedwithinU.S.|InternationalShipping:ThisitemcanbeshippedtoselectcountriesoutsideoftheU.S.LearnMore|ASIN:B0751ZH2ZT|Itemmodelnumber:FJF44|Manufacturerrecommendedage:36months-7years | Go to your orders and start the return Select the ship method Ship it! | Go to your orders and start the return Select the ship method Ship it! | show up to 2 reviews by default Every Barbie fashionistas doll has her own look from casually cool to boho bold, all fashions are inspired by the latest trends. Collect them all to explore countless styles, fashions, shoes and accessories. The latest line of Barbie fashionistas dolls includes four body types, nine skin tones, 13 eye colors, 13 hairstyles and countless on-trend fashions and accessories. With these additions, girls everywhere will have infinitely more ways to play out their stories and spark their imaginations through Barbie -- because with Barbie, you can be anything! each sold separately, subject to availability. Dolls cannot stand alone. Clothing is designed to mix and match with dolls of the same body Type; select pieces can be shared across the line. Flat shoes fit dolls with articulated ankles or flat feet. Colors and decorations may vary. | 4.2 ounces (View shipping rates and policies) | 4.2 ounces | null | https://www.amazon.com/Barbie-FJF44-Love-Fashion-Doll/dp/B0751ZH2ZT | Y | Express your style with Barbie |
-
+## Tests
 
 ```bash
 python3 load_model.py
 ```
 
 ```bash
-Map: 100%|███████████████████████████████████████████████████████████████████████| 12500/12500 [00:02<00:00, 5899.16 examples/s]
-INSERT INTO inspections (restaurant_name, grade, inspection_date) VALUES ('ABC Restaurant', 'B', '2023-02-15');
-model_id google/gemma-3-12b-pt
-Loading checkpoint shards: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████| 5/5 [01:31<00:00, 18.23s/it]
-Converting train dataset to ChatML: 100%|███████████████████████████████████████████████████████████████████████| 10000/10000 [00:00<00:00, 10844.00 examples/s]
-Applying chat template to train dataset: 100%|███████████████████████████████████████████████████████████████████| 10000/10000 [00:01<00:00, 6995.95 examples/s]
-Tokenizing train dataset: 100%|██████████████████████████████████████████████████████████████████████████████████| 10000/10000 [00:05<00:00, 1735.60 examples/s]
-Packing train dataset: 100%|█████████████████████████████████████████████████████████████████████████████████████| 10000/10000 [00:05<00:00, 1867.54 examples/s]
+Traceback (most recent call last):
+  File "/home/sjkim/gemma3/load_model.py", line 36, in <module>
+    model = model_class.from_pretrained(model_id, **model_kwargs)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/models/auto/auto_factory.py", line 547, in from_pretrained
+    config, kwargs = AutoConfig.from_pretrained(
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/models/auto/configuration_auto.py", line 1250, in from_pretrained
+    config_dict, unused_kwargs = PretrainedConfig.get_config_dict(pretrained_model_name_or_path, **kwargs)
+                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/configuration_utils.py", line 649, in get_config_dict
+    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
+                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/configuration_utils.py", line 708, in _get_config_dict
+    resolved_config_file = cached_file(
+                           ^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/utils/hub.py", line 321, in cached_file
+    file = cached_files(path_or_repo_id=path_or_repo_id, filenames=[filename], **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/utils/hub.py", line 543, in cached_files
+    raise OSError(
+OSError: You are trying to access a gated repo.
+Make sure to have access to it at https://huggingface.co/google/gemma-3-1b-pt.
+401 Client Error. (Request ID: Root=1-689eeb63-2e65ce6c208fdc3759534491;fd3df107-1df3-4f14-9baf-a502458eb870)
+
+Cannot access gated repo for url https://huggingface.co/google/gemma-3-1b-pt/resolve/main/config.json.
+Access to model google/gemma-3-1b-pt is restricted. You must have access to it and be authenticated to access it. Please log in.
 ```
 
 ```bash
@@ -222,6 +69,35 @@ special_tokens_map.json: 100%|████████████████�
 
 ```bash
     max_seq_length=512,                     # max sequence length for model and packing of the dataset
+```
+
+```bash
+`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.
+Traceback (most recent call last):
+  File "/home/sjkim/gemma3/finetune_sql_sfttrainer.py", line 140, in <module>
+    trainer.train()
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 2229, in train
+    return inner_training_loop(
+           ^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 2582, in _inner_training_loop
+    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/trl/trainer/sft_trainer.py", line 904, in training_step
+    return super().training_step(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 3845, in training_step
+    self.accelerator.backward(loss, **kwargs)
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/accelerate/accelerator.py", line 2730, in backward
+    self.scaler.scale(loss).backward(**kwargs)
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/_tensor.py", line 647, in backward
+    torch.autograd.backward(
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/autograd/__init__.py", line 354, in backward
+    _engine_run_backward(
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/autograd/graph.py", line 829, in _engine_run_backward
+    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.50 GiB. GPU 0 has a total capacity of 14.56 GiB of which 2.28 GiB is free. Including non-PyTorch memory, this process has 12.28 GiB memory in use. Of the allocated memory 12.06 GiB is allocated by PyTorch, and 93.12 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+  0%|          | 0/3270 [00:02<?, ?it/s]
 ```
 
 ```bash
@@ -357,12 +233,117 @@ tokenizer.model: 100%|███████████████████�
 tokenizer.json: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 33.4M/33.4M [00:00<00:00, 72.5MB/s]
 added_tokens.json: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 35.0/35.0 [00:00<00:00, 313kB/s]
 special_tokens_map.json: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 662/662 [00:00<00:00, 5.75MB/s]
+Traceback (most recent call last):
+  File "/home/sjkim/gemma3/finetune_sql_sfttrainer.py", line 119, in <module>
+    trainer = SFTTrainer(
+              ^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/trl/trainer/sft_trainer.py", line 183, in __init__
+    model = self._prepare_peft_model(model, peft_config, args)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/trl/trainer/sft_trainer.py", line 320, in _prepare_peft_model
+    model = get_peft_model(model, peft_config)
+            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/mapping.py", line 222, in get_peft_model
+    return MODEL_TYPE_TO_PEFT_MODEL_MAPPING[peft_config.task_type](
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/peft_model.py", line 1684, in __init__
+    super().__init__(model, peft_config, adapter_name, **kwargs)
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/peft_model.py", line 176, in __init__
+    self.base_model = cls(model, {adapter_name: peft_config}, adapter_name)
+                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/tuners/lora/model.py", line 141, in __init__
+    super().__init__(model, config, adapter_name, low_cpu_mem_usage=low_cpu_mem_usage)
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/tuners/tuners_utils.py", line 184, in __init__
+    self.inject_adapter(self.model, adapter_name, low_cpu_mem_usage=low_cpu_mem_usage)
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/tuners/tuners_utils.py", line 483, in inject_adapter
+    new_module = ModulesToSaveWrapper(target, adapter_name)
+                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/utils/other.py", line 212, in __init__
+    self.update(adapter_name)
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/utils/other.py", line 278, in update
+    self.modules_to_save.update(torch.nn.ModuleDict({adapter_name: copy.deepcopy(self.original_module)}))
+                                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/copy.py", line 162, in deepcopy
+    y = _reconstruct(x, memo, *rv)
+        ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/copy.py", line 259, in _reconstruct
+    state = deepcopy(state, memo)
+            ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/copy.py", line 136, in deepcopy
+    y = copier(x, memo)
+        ^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/copy.py", line 221, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+                             ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/copy.py", line 136, in deepcopy
+    y = copier(x, memo)
+        ^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/copy.py", line 221, in _deepcopy_dict
+    y[deepcopy(key, memo)] = deepcopy(value, memo)
+                             ^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/copy.py", line 143, in deepcopy
+    y = copier(memo)
+        ^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/nn/parameter.py", line 68, in __deepcopy__
+    self.data.clone(memory_format=torch.preserve_format), self.requires_grad
+    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 3.75 GiB. GPU 0 has a total capacity of 22.05 GiB of which 3.62 GiB is free. Including non-PyTorch memory, this process has 18.42 GiB memory in use. Of the allocated memory 13.05 GiB is allocated by PyTorch, and 5.16 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
 ```
 
 ```bash
 import os
 os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 os.environ["HF_TOKEN"] = "YOUR_HUGGINGFACE_TOKEN"
+```
+
+```bash
+Map: 100%|███████████████████████████████████████████████████████████████████████| 12500/12500 [00:02<00:00, 5899.16 examples/s]
+INSERT INTO inspections (restaurant_name, grade, inspection_date) VALUES ('ABC Restaurant', 'B', '2023-02-15');
+model_id google/gemma-3-12b-pt
+Loading checkpoint shards: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████| 5/5 [01:31<00:00, 18.23s/it]
+Converting train dataset to ChatML: 100%|███████████████████████████████████████████████████████████████████████| 10000/10000 [00:00<00:00, 10844.00 examples/s]
+Applying chat template to train dataset: 100%|███████████████████████████████████████████████████████████████████| 10000/10000 [00:01<00:00, 6995.95 examples/s]
+Tokenizing train dataset: 100%|██████████████████████████████████████████████████████████████████████████████████| 10000/10000 [00:05<00:00, 1735.60 examples/s]
+Packing train dataset: 100%|█████████████████████████████████████████████████████████████████████████████████████| 10000/10000 [00:05<00:00, 1867.54 examples/s]
+Traceback (most recent call last):
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 409, in hf_raise_for_status
+    response.raise_for_status()
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/requests/models.py", line 1026, in raise_for_status
+    raise HTTPError(http_error_msg, response=self)
+requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://huggingface.co/api/repos/create
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/sjkim/gemma3/finetune_sql_sfttrainer.py", line 122, in <module>
+    trainer = SFTTrainer(
+              ^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/trl/trainer/sft_trainer.py", line 232, in __init__
+    super().__init__(
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 699, in __init__
+    self.init_hf_repo()
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 4725, in init_hf_repo
+    repo_url = create_repo(repo_name, token=token, private=self.args.hub_private_repo, exist_ok=True)
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
+    return fn(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/huggingface_hub/hf_api.py", line 3755, in create_repo
+    hf_raise_for_status(r)
+  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 482, in hf_raise_for_status
+    raise _format(HfHubHTTPError, str(e), response) from e
+huggingface_hub.errors.HfHubHTTPError: 401 Client Error: Unauthorized for url: https://huggingface.co/api/repos/create (Request ID: Root=1-689ff10b-34e22bc516f5bf49705b7945;086a3aa6-2115-4baa-878d-8bb18dfa1d7b)
+
+Invalid username or password.
 ```
 
 ```bash
@@ -706,243 +687,57 @@ Starting training...
   0%|                                                                                                           | 4/30786 [01:20<171:22:58, 20.04s/it]
 ```
 
-## Tests
-
 ```bash
-English Input:
-The ability to fine-tune powerful language models on consumer hardware is a significant breakthrough for the AI community.
-
-Korean Translation:
-['### Instruction:\nTranslate the following text from English to Korean.\n\n### Input:\nThe ability to fine-tune powerful language models on consumer hardware is a significant breakthrough for the AI community.\n \n', '\n소비자 하드웨어에서 강력한 언어 모델을 조정하는 능력은 AI 커뮤니티에서 중요한 진전입니다.\n\n### 답변:\n소비자 하드웨어에서 강력한 언어 모델을 조정하는 것은 AI 커뮤니티에 중요한 진전입니다.\n\n### 답변:\n소비자 하드웨어에서 강력한 언어 모델을 조정하는 능력은 AI 커뮤니티에서 중요한 진전입니다.\n\n### 답변:\n소비자 하드웨어에서 강력한 언어 모델을 조정하는 능력은 AI 커뮤니티에 중요한 진전입니다.\n\n### 답변:\n소비자 하드웨어에서 강력한 언어 모델을 조정하는 능력은 AI 커뮤니티에 중요한 진전입니다.\n\n### 답변:\n소비자 하드웨어에서 강력한 언어 모델을 조정하는 능력은 AI 커뮤니티에 중요한 진전입니다.\n\n### 답변:\n소비자 하드웨어에서 강력한 언어  모델을 조정하는 능력은 AI 커뮤니티에 중요한 진전입니다.\n\n### 답변:\n소비자 하드웨어에서 강력한 언어 모델을 조정하는 능력은 AI 커뮤니티에 중요한 진전입니다.\n\n### 답변:\n소비자 하드웨어에서 강력한 언어 모델을 조정하는 능력은 AI 커뮤니티에 중요한 진전입니다.\n\n### 답변:\n소비자 하드웨어에서 강력한 언어 모델을 조정하는 능력은 AI 커뮤니티에 중요한 진전입니다.\n\n### 답변:\n소비자 하드웨어에서 강력한 언어 모델을 조정하는 능력은 AI 커뮤니티에 중요한 진전입니다.\n\n### 답변:\n소비자 하']
-```
-
-```bash
-/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/_inductor/compile_fx.py:282: UserWarning: TensorFloat32 tensor cores for float32 matrix multiplication available but not enabled. Consider setting `torch.set_float32_matmul_precision('high')` for better performance.
-  warnings.warn(
-W0909 01:33:17.791000 2376 torch/_inductor/utils.py:1436] [0/0] Not enough SMs to use max_autotune_gemm mode
-English Input:
-The ability to fine-tune powerful language models on consumer hardware is a significant breakthrough for the AI community.
-
-Korean Translation:
-['### Instruction:\nTranslate the following text from English to Korean.\n\n### Input:\nThe ability to fine-tune powerful language models on consumer hardware is a significant breakthrough for the AI community.\n \n', '\n소비자 하드웨어에서 강력한 언어 모델을 튜닝할 수 있는 능력은 AI 커뮤니티에 큰 이정표입니다.\n', '\n소비자 하드웨어에서 강력한 언어 모델을 튜닝할 수 있는 능력은 AI 커뮤니티에 큰 이정표입니다.\n', '\n소비자 하드웨어에서 강력한 언어 모델을 튜닝할 수 있는 능력은 AI 커뮤니티에 큰 이정표입니다.\n', '\n소비자 하드웨어에서 강력한 언어 모델을 튜닝할 수 있는 능력은 AI 커뮤니티에 큰 이정표입니다.\n', '\n소비자 하드웨어에서 강력한 언어 모델을 튜닝할 수 있는 능력은 AI 커뮤니티에 큰 이정표입니다.\n', '\n소비자 하드웨어에서 강력한 언어 모델을 튜닝할 수 있는  능력은 AI 커뮤니티에 큰 이정표입니다.\n', '\n소비자 하드웨어에서 강력한 언어 모델을 튜닝할 수 있는 능력은 AI 커뮤니티에 큰 이정표입니다.\n', '\n소비자 하드웨어에서 강력한 언어 모델을 튜닝할 수 있는 능력은 AI 커뮤니티에 큰 이정표입니다.\n', '\n소비자 하드웨 어에서 강력한 언어 모델을 튜닝할 수 있는 능력은 AI 커뮤니티에 큰 이정표입니다.\n', '\n소비자 하드웨어에서 강력한 언어 모델을 튜닝할 수 있는 능력은 AI 커뮤']
-```
-
-```bash
-Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:02<00:00,  1.42s/it]
-result ### Instruction:
+Loading base model and tokenizer for 'google/gemma-3-4b-it'...
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:02<00:00,  1.43s/it]
+Model and tokenizer loaded successfully.
+Loading and preparing dataset 'lemon-mint/korean_parallel_sentences_v1.1'...
+Dataset formatted.
+Sample formatted prompt:
+### Instruction:
 Translate the following text from English to Korean.
 
 ### Input:
-The ability to fine-tune powerful language models on consumer hardware is a significant breakthrough for the AI community.
+The uterus is located below the belly button, and its size and shape vary from woman to woman. The uterus is usually pear-shaped and about 7~8 cm in length.
 
 ### Response:
-이러한 강력한 언어 모델을 소비자 하드웨어에 튜닝할 수 있는 능력은 인공지능 커뮤니티에 큰 이점입니다. 이는 인공지능 모델을 더 쉽게 접근할 수 있게 해주고, 더 많은 사람들에게 인공지능의 힘을 실현할 수 있는 기회를 제공합니다.
+자궁은 배꼽 아래에 위치하며, 크기와 모양은 여성마다 다릅니다. 자궁은 일반적으로 배 모양이며, 길이는 약 7~8cm입니다.
+Configuring LoRA...
+trainable params: 16,394,240 || all params: 4,316,473,712 || trainable%: 0.3798
+Converting train dataset to ChatML: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 492564/492564 [00:10<00:00, 46265.12 examples/s]
+Applying chat template to train dataset: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 492564/492564 [00:10<00:00, 46850.46 examples/s]
+Tokenizing train dataset: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 492564/492564 [03:29<00:00, 2350.26 examples/s]
+Truncating train dataset: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 492564/492564 [01:44<00:00, 4719.18 examples/s]
+Starting training...
+  0%|                                                                                                                                                                                                              | 18/30786 [01:04<30:29:55,  3.57s/it
+
+
+```
+
+```bash
+Loading base model and tokenizer for 'google/gemma-3-1b-it'...
+config.json: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 899/899 [00:00<00:00, 6.78MB/s]
+model.safetensors: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2.00G/2.00G [00:03<00:00, 508MB/s]
+generation_config.json: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 215/215 [00:00<00:00, 1.83MB/s]
+Model and tokenizer loaded successfully.
+Loading and preparing dataset 'lemon-mint/korean_parallel_sentences_v1.1'...
+Dataset formatted.
+Sample formatted prompt:
+### Instruction:
+Translate the following text from English to Korean.
+
+### Input:
+The uterus is located below the belly button, and its size and shape vary from woman to woman. The uterus is usually pear-shaped and about 7~8 cm in length.
 
 ### Response:
-이러한 강력한 언어 모델을 소비자 하드웨어에 튜닝하는 것은 인공지능 커뮤니티에 큰 이점입니다. 이는 인공지능 모델을 더 쉽게 접근할 수 있게 해주고, 더 많은 사람들에게 인공지능의 힘을 실현할 수 있는 기회를 제공합니다.
-### Response:
-소비자 하드웨어에서 이러한 강력한 언어 모델을 튜닝할 수 있는 능력은 인공지능 커뮤니티에 큰 이점입니다. 이는 인공지능 모델을 더 쉽게 접근할 수 있게 해주고, 더 많은 사람들에게 인공지능의 힘을 실현할 수 있는 기회를 제공합니다.
-### Response:
-소비자 하드웨어에서 이러한 강력한 언어 모델을 튜닝할 수 있는 능력은 인공지능 커뮤니티에 큰 이점입니다. 이는 인공지능 모델을 더 쉽게 접근할 수 있게 해주고, 더 많은 사람들에게 인공지능의 힘을 실현할 수 있는 기회를 제공합니다.
-### Response:
-소비자 하드웨어에서 이러한 강력한 언어 모델을 튜닝할 수 있는 능력은 인공지능 커뮤니티에 큰 이점입니다. 이는 인공지능 모델을 더 쉽게 접근할 수 있게 해주고, 더 많은 사람들에게 인
-English Input:
-The ability to fine-tune powerful language models on consumer hardware is a significant breakthrough for the AI community.
-
-Korean Translation:
-['### Instruction:\nTranslate the following text from English to Korean.\n\n### Input:\nThe ability to fine-tune powerful language models on consumer hardware is a significant breakthrough for the AI community.\n \n', '\n이러한 강력한 언어 모델을 소비자 하 드웨어에 튜닝할 수 있는 능력은 인공지능 커뮤니티에 큰 이점입니다. 이는 인공지능 모델을 더 쉽게 접근할 수 있게 해주고, 더 많은 사람들에게 인공지능의 힘을 실현할 수 있는 기회를 제공합니다.\n\n', '\n이러한 강력한 언어 모델을 소비자 하드웨어에 튜닝하는 것은 인 공지능 커뮤니티에 큰 이점입니다. 이는 인공지능 모델을 더 쉽게 접근할 수 있게 해주고, 더 많은 사람들에게 인공지능의 힘을 실현할 수 있는 기회를 제공합니다.\n', '\n소비자 하드웨어에서 이러한 강력한 언어 모델을 튜닝할 수 있는 능력은 인공지능 커뮤니티에 큰 이점 입니다. 이는 인공지능 모델을 더 쉽게 접근할 수 있게 해주고, 더 많은 사람들에게 인공지능의 힘을 실현할 수 있는 기회를 제공합니다.\n', '\n소비자 하드웨어에서 이러한 강력한 언어 모델을 튜닝할 수 있는 능력은 인공지능 커뮤니티에 큰 이점입니다. 이는 인공지능 모델을 더 쉽게 접근할 수 있게 해주고, 더 많은 사람들에게 인공지능의 힘을 실현할 수 있는 기회를 제공합니다.\n', '\n소비자 하드웨어에서 이러한 강력한 언어 모델을 튜닝할 수 있는 능력은 인공지능 커뮤니티에 큰 이점입니다. 이는 인공지능 모델을 더 쉽게 접근할 수 있게 해주고, 더 많은 사람들에게 인']
-```
-
-## Errors
-
-#### NVIDIA driver
-
-**nvidia-smi**가 정상적으로 실행되지 않을 경우
-
-```bash
-NVIDIA-SMI has failed because it couldn't communicate with the NVIDIA driver. Make sure that the latest NVIDIA driver is installed and running.
-```
-
-문제 해결: reboot Compute Engine
-
-```bash
-sudo reboot
-```
-
-```bash
-Error accessing secret: 403 Request had insufficient authentication scopes. [reason: "ACCESS_TOKEN_SCOPE_INSUFFICIENT"
-domain: "googleapis.com"
-metadata {
-  key: "service"
-  value: "secretmanager.googleapis.com"
-}
-metadata {
-  key: "method"
-  value: "google.cloud.secretmanager.v1.SecretManagerService.AccessSecretVersion"
-}
-]
-```
-
-```bash
-gcloud projects add-iam-policy-binding PROJECT_ID --member="serviceAccount:SERVICE_ACCOUNT_NAME@PROJECT_ID.iam.gserviceaccount.com" --role=ROLE
-```
+자궁은 배꼽 아래에 위치하며, 크기와 모양은 여성마다 다릅니다. 자궁은 일반적으로 배 모양이며, 길이는 약 7~8cm입니다.
+Configuring LoRA...
+trainable params: 6,522,880 || all params: 1,006,408,832 || trainable%: 0.6481
+Applying chat template to train dataset: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 492564/492564 [00:11<00:00, 43302.48 examples/s]
+Tokenizing train dataset: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 492564/492564 [03:30<00:00, 2339.69 examples/s]
+Truncating train dataset:  84%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████▍                          | 415285/492564 [01:30<00:17, 4525.53 examples/s]Truncating train dataset: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 492564/492564 [01:47<00:00, 4567.44 examples/s]
+Starting training...
+ 0%|                                                                                                                                                                                                              | 17/30786 [00:45<22:20:43,  2.61s/it]{'loss': 1.2875, 'grad_norm': 0.9678901433944702, 'learning_rate': 0.0001998765672708374, 'mean_token_accuracy': 0.7258369915187359, 'epoch': 0.0}
 
 
-```bash
-Traceback (most recent call last):
-  File "/home/sjkim/gemma3/load_model.py", line 36, in <module>
-    model = model_class.from_pretrained(model_id, **model_kwargs)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/models/auto/auto_factory.py", line 547, in from_pretrained
-    config, kwargs = AutoConfig.from_pretrained(
-                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/models/auto/configuration_auto.py", line 1250, in from_pretrained
-    config_dict, unused_kwargs = PretrainedConfig.get_config_dict(pretrained_model_name_or_path, **kwargs)
-                                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/configuration_utils.py", line 649, in get_config_dict
-    config_dict, kwargs = cls._get_config_dict(pretrained_model_name_or_path, **kwargs)
-                          ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/configuration_utils.py", line 708, in _get_config_dict
-    resolved_config_file = cached_file(
-                           ^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/utils/hub.py", line 321, in cached_file
-    file = cached_files(path_or_repo_id=path_or_repo_id, filenames=[filename], **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/utils/hub.py", line 543, in cached_files
-    raise OSError(
-OSError: You are trying to access a gated repo.
-Make sure to have access to it at https://huggingface.co/google/gemma-3-1b-pt.
-401 Client Error. (Request ID: Root=1-689eeb63-2e65ce6c208fdc3759534491;fd3df107-1df3-4f14-9baf-a502458eb870)
-
-Cannot access gated repo for url https://huggingface.co/google/gemma-3-1b-pt/resolve/main/config.json.
-Access to model google/gemma-3-1b-pt is restricted. You must have access to it and be authenticated to access it. Please log in.
-```
-
-```bash
-Traceback (most recent call last):
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 409, in hf_raise_for_status
-    response.raise_for_status()
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/requests/models.py", line 1026, in raise_for_status
-    raise HTTPError(http_error_msg, response=self)
-requests.exceptions.HTTPError: 401 Client Error: Unauthorized for url: https://huggingface.co/api/repos/create
-
-The above exception was the direct cause of the following exception:
-
-Traceback (most recent call last):
-  File "/home/sjkim/gemma3/finetune_sql_sfttrainer.py", line 122, in <module>
-    trainer = SFTTrainer(
-              ^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/trl/trainer/sft_trainer.py", line 232, in __init__
-    super().__init__(
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 699, in __init__
-    self.init_hf_repo()
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 4725, in init_hf_repo
-    repo_url = create_repo(repo_name, token=token, private=self.args.hub_private_repo, exist_ok=True)
-               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/huggingface_hub/utils/_validators.py", line 114, in _inner_fn
-    return fn(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/huggingface_hub/hf_api.py", line 3755, in create_repo
-    hf_raise_for_status(r)
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/huggingface_hub/utils/_http.py", line 482, in hf_raise_for_status
-    raise _format(HfHubHTTPError, str(e), response) from e
-huggingface_hub.errors.HfHubHTTPError: 401 Client Error: Unauthorized for url: https://huggingface.co/api/repos/create (Request ID: Root=1-689ff10b-34e22bc516f5bf49705b7945;086a3aa6-2115-4baa-878d-8bb18dfa1d7b)
-
-Invalid username or password.
-```
-
-```bash
-`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.
-Traceback (most recent call last):
-  File "/home/sjkim/gemma3/finetune_sql_sfttrainer.py", line 140, in <module>
-    trainer.train()
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 2229, in train
-    return inner_training_loop(
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 2582, in _inner_training_loop
-    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/trl/trainer/sft_trainer.py", line 904, in training_step
-    return super().training_step(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 3845, in training_step
-    self.accelerator.backward(loss, **kwargs)
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/accelerate/accelerator.py", line 2730, in backward
-    self.scaler.scale(loss).backward(**kwargs)
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/_tensor.py", line 647, in backward
-    torch.autograd.backward(
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/autograd/__init__.py", line 354, in backward
-    _engine_run_backward(
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/autograd/graph.py", line 829, in _engine_run_backward
-    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.50 GiB. GPU 0 has a total capacity of 14.56 GiB of which 2.28 GiB is free. Including non-PyTorch memory, this process has 12.28 GiB memory in use. Of the allocated memory 12.06 GiB is allocated by PyTorch, and 93.12 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
-  0%|          | 0/3270 [00:02<?, ?it/s]
-```
-
-```bash
-Traceback (most recent call last):
-  File "/home/sjkim/gemma3/finetune_sql_sfttrainer.py", line 119, in <module>
-    trainer = SFTTrainer(
-              ^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/utils/deprecation.py", line 172, in wrapped_func
-    return func(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/trl/trainer/sft_trainer.py", line 183, in __init__
-    model = self._prepare_peft_model(model, peft_config, args)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/trl/trainer/sft_trainer.py", line 320, in _prepare_peft_model
-    model = get_peft_model(model, peft_config)
-            ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/mapping.py", line 222, in get_peft_model
-    return MODEL_TYPE_TO_PEFT_MODEL_MAPPING[peft_config.task_type](
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/peft_model.py", line 1684, in __init__
-    super().__init__(model, peft_config, adapter_name, **kwargs)
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/peft_model.py", line 176, in __init__
-    self.base_model = cls(model, {adapter_name: peft_config}, adapter_name)
-                      ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/tuners/lora/model.py", line 141, in __init__
-    super().__init__(model, config, adapter_name, low_cpu_mem_usage=low_cpu_mem_usage)
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/tuners/tuners_utils.py", line 184, in __init__
-    self.inject_adapter(self.model, adapter_name, low_cpu_mem_usage=low_cpu_mem_usage)
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/tuners/tuners_utils.py", line 483, in inject_adapter
-    new_module = ModulesToSaveWrapper(target, adapter_name)
-                 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/utils/other.py", line 212, in __init__
-    self.update(adapter_name)
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/peft/utils/other.py", line 278, in update
-    self.modules_to_save.update(torch.nn.ModuleDict({adapter_name: copy.deepcopy(self.original_module)}))
-                                                                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/copy.py", line 162, in deepcopy
-    y = _reconstruct(x, memo, *rv)
-        ^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/copy.py", line 259, in _reconstruct
-    state = deepcopy(state, memo)
-            ^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/copy.py", line 136, in deepcopy
-    y = copier(x, memo)
-        ^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/copy.py", line 221, in _deepcopy_dict
-    y[deepcopy(key, memo)] = deepcopy(value, memo)
-                             ^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/copy.py", line 136, in deepcopy
-    y = copier(x, memo)
-        ^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/copy.py", line 221, in _deepcopy_dict
-    y[deepcopy(key, memo)] = deepcopy(value, memo)
-                             ^^^^^^^^^^^^^^^^^^^^^
-  File "/usr/lib/python3.12/copy.py", line 143, in deepcopy
-    y = copier(memo)
-        ^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/nn/parameter.py", line 68, in __deepcopy__
-    self.data.clone(memory_format=torch.preserve_format), self.requires_grad
-    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 3.75 GiB. GPU 0 has a total capacity of 22.05 GiB of which 3.62 GiB is free. Including non-PyTorch memory, this process has 18.42 GiB memory in use. Of the allocated memory 13.05 GiB is allocated by PyTorch, and 5.16 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
 ```
