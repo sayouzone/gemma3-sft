@@ -128,7 +128,7 @@ if __name__ == "__main__":
     hf_token_secret_id = os.getenv("hf_token_secret_id")
 
     #login_huggingface(get_hf_token(hf_token_secret_id))
-    login_huggingface("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")
+    login_huggingface("YOUR_HUGGINGFACE_TOKEN")
 
     api = HfApi()
     repo_id = "sayouzone25/translation-dataset-v1" # Replace with your username and desired dataset name
