@@ -1,4 +1,11 @@
 from datasets import load_dataset
+from huggingface_hub import HfApi, login
+
+import os
+from dotenv import load_dotenv
+
+import google.auth
+from google.cloud import secretmanager
 
 """
 데이터 로딩: load_dataset 함수를 사용하여 Hugging Face Hub에서 데이터셋을 로드합니다.23
@@ -22,6 +29,47 @@ raw_dataset = load_dataset(dataset_name, split="train")
 # raw_dataset = raw_dataset.shuffle(seed=42).select(range(10000))
 """
 
+def get_hf_token(hf_token_secret_id):
+    # 기본 인증 정보 로드
+    # GCE 인스턴스는 서비스 계정을 통해 자동으로 인증됩니다.
+    credentials, project = google.auth.default()
+    print('project', project)
+    print('credentials', credentials)
+    print('credentials.service_account_email', credentials.service_account_email)
+    #project = '1037372895180'
+
+    # Secret Manager 클라이언트 생성
+    client = secretmanager.SecretManagerServiceClient()
+
+    # 시크릿의 이름 (버전 포함)
+    # 'YOUR_SECRET_ID'와 'LATEST_VERSION'을 실제 시크릿 정보로 바꿔주세요.
+    # 'LATEST_VERSION'은 가장 최신 버전을 의미합니다.
+    secret_name = f"projects/{project}/secrets/{hf_token_secret_id}/versions/latest"
+
+    payload = None
+    try:
+        # 시크릿 버전 접근 요청
+        response = client.access_secret_version(name=secret_name)
+        
+        # 페이로드 데이터 디코딩
+        payload = response.payload.data.decode("UTF-8")
+        
+        # 시크릿 값 출력
+        print(f"Secret value: {payload}")
+        
+    except Exception as e:
+        print(f"Error accessing secret: {e}")
+
+    return payload
+
+def login_huggingface(hf_token):
+    #os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
+    if hf_token:
+        # Hugging Face Hub에 로그인합니다.
+        login(token=hf_token)
+        print("Successfully logged in to Hugging Face Hub!")
+    else:
+        print("HF_TOKEN environment variable not found.")
 
 def load_dataset_file(file_paths):
     # 단일 파일 로드
@@ -61,6 +109,7 @@ if __name__ == "__main__":
     print("raw_dataset", type(raw_dataset))
     print("raw_dataset", raw_dataset[:1])
     #.map()을 사용하여 전체 데이터셋에 프롬프트 형식 적용
+    
     formatted_dataset = raw_dataset.map(create_translation_prompt, num_proc=4, remove_columns=raw_dataset.column_names)
     #formatted_dataset = formatted_dataset.shuffle().select(range(1500))
     print("Dataset formatted.")
@@ -69,3 +118,22 @@ if __name__ == "__main__":
 
     #print(formatted_dataset[0])
     print(formatted_dataset)
+
+    # --- 1. 기본 설정 및 인증 ---
+    # .env 파일 로드
+    load_dotenv()
+
+    # 환경 변수 설정
+    #os.environ["HF_TOKEN"] = os.getenv("HF_TOKEN")
+    hf_token_secret_id = os.getenv("hf_token_secret_id")
+
+    #login_huggingface(get_hf_token(hf_token_secret_id))
+    login_huggingface("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")
+
+    api = HfApi()
+    repo_id = "sayouzone25/translation-dataset-v1" # Replace with your username and desired dataset name
+
+    # Create a private repository
+    #api.create_repo(repo_id=repo_id, repo_type="dataset", private=True)
+
+    raw_dataset.push_to_hub(repo_id)
