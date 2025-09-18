@@ -104,7 +104,6 @@ dataset = dataset.train_test_split(test_size=2500/12500)
 # Print formatted user prompt
 print(dataset["train"][345]["messages"][1]["content"])
 
-#model_name = "gemma-3-4b"
 model_name = "gemma-3-12b"
 # Hugging Face model id
 #model_id = "google/gemma-3-1b-pt" # or `google/gemma-3-4b-pt`, `google/gemma-3-12b-pt`, `google/gemma-3-27b-pt`

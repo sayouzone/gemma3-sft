@@ -111,7 +111,8 @@ Translate the following text from English to Korean.
 ### Response:
 """
 
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    #inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    inputs = tokenizer(prompt, return_tensors="pt").to_empty(device=model.device)
     #print("inputs", inputs)
     outputs = model.generate(**inputs, max_new_tokens=len(text) * 3, eos_token_id=tokenizer.eos_token_id)
     #print("outputs", outputs)
@@ -130,7 +131,8 @@ Translate the following text from English to Korean as {genre} genre.
 ### Response:
 """
 
-    inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    #inputs = tokenizer(prompt, return_tensors="pt").to(model.device)
+    inputs = tokenizer(prompt, return_tensors="pt").to_empty(device=model.device)
     #print("inputs", inputs)
     outputs = model.generate(**inputs, max_new_tokens=len(text) * 3, eos_token_id=tokenizer.eos_token_id)
     #print("outputs", outputs)
@@ -166,8 +168,9 @@ print(f"Loading base model and tokenizer for '{model_id}'...")
 model = AutoModelForCausalLM.from_pretrained(
     model_id,
     attn_implementation="eager", # Use "flash_attention_2" when running on Ampere or newer GPU
-    torch_dtype=torch.bfloat16,
+    #torch_dtype=torch.bfloat16,
     #torch_dtype=torch.float16,
+    torch_dtype="auto",
     device_map="auto"  # 모델을 자동 로드
 )
 
@@ -219,24 +222,43 @@ peft_model.print_trainable_parameters()
 # --- 5. SFTTrainer 구성 및 훈련 ---
 output_dir = f"./{model_name}-en-ko-trans"
 
+"""
 training_args = TrainingArguments(
     output_dir=output_dir,
     per_device_train_batch_size=2,
     gradient_accumulation_steps=8,
     learning_rate=2e-4,
-    bf16=True,  # Mbf16 사용 여부 (GPU에서만 가능)
-    #fp16=True,  # Use fp16 for mixed-precision on MPS
+    #bf16=True,  # Mbf16 사용 여부 (GPU에서만 가능)
+    fp16=True,  # Use fp16 for mixed-precision on MPS
     logging_steps=20,
     num_train_epochs=1,
     save_strategy="epoch",
     report_to="none"
 )
+"""
+training_args = TrainingArguments(
+)
 
+# Make sure model is properly loaded
+print(f"Model device: {next(peft_model.parameters()).device}")
+print(f"Model dtype: {next(peft_model.parameters()).dtype}")
+
+"""
 trainer = SFTTrainer(
     model=peft_model,
     args=training_args,
     train_dataset=formatted_dataset,
     #dataset_text_field="text",
+    #tokenizer=tokenizer,
+    #max_seq_length=512,
+    #packing=False,
+)
+"""
+trainer = SFTTrainer(
+    model=peft_model,
+    args=training_args,
+    train_dataset=formatted_dataset,
+    dataset_text_field="text",
     #tokenizer=tokenizer,
     #max_seq_length=512,
     #packing=False,
