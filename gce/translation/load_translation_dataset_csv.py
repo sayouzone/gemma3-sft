@@ -61,6 +61,7 @@ if __name__ == "__main__":
     print("raw_dataset", type(raw_dataset))
     print("raw_dataset", raw_dataset[:1])
     #.map()을 사용하여 전체 데이터셋에 프롬프트 형식 적용
+    
     formatted_dataset = raw_dataset.map(create_translation_prompt, num_proc=4, remove_columns=raw_dataset.column_names)
     #formatted_dataset = formatted_dataset.shuffle().select(range(1500))
     print("Dataset formatted.")
