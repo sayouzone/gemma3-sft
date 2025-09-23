@@ -151,6 +151,10 @@ pip install -r requirements.txt
 HF_TOKEN=YOUR_HUGGINGFACE_TOKEN
 ```
 
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS=~/Development/sayouzone/credentials/sayouzone-ai-ce33a3d8d424.json
+```
+
 #### Datasets
 
 Synthetic Text-to-SQL dataset consisting of 105,851 high-quality records across 100 diverse domains, designed for training language models. 
@@ -422,48 +426,6 @@ No files have been modified since last commit. Skipping to prevent empty commit.
 Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:04<00:00,  2.15s/it]
 ```
 
-gemma-3-4b-text-to-sql
-
-```bash
-model_id google/gemma-3-4b-pt
-Using device: gpu
-Using dtype: torch.bfloat16
-Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:29<00:00, 14.70s/it]
-Device set to use cuda:0
-Map: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 12500/12500 [00:02<00:00, 5819.67 examples/s]
-SELECT country, SUM(funding) FROM climate_mitigation_projects WHERE year = 2020 GROUP BY country;
-The following generation flags are not valid and may be ignored: ['temperature', 'top_p']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
-Context:
- CREATE TABLE Aircraft (id INT, model VARCHAR(255), manufacturer VARCHAR(255), year_manufactured INT, total_flight_hours INT); INSERT INTO Aircraft (id, model, manufacturer, year_manufactured, total_flight_hours) VALUES (1, 'B747', 'Boeing', 1990, 50000); INSERT INTO Aircraft (id, model, manufacturer, year_manufactured, total_flight_hours) VALUES (2, 'A320', 'Airbus', 2005, 30000); CREATE TABLE Engine (id INT, aircraft_id INT, engine_type VARCHAR(255), hours_since_last_service INT); INSERT INTO Engine (id, aircraft_id, engine_type, hours_since_last_service) VALUES (1, 1, 'CF6-80C2B1', 500); INSERT INTO Engine (id, aircraft_id, engine_type, hours_since_last_service) VALUES (2, 2, 'CFM56-5B', 1000); INSERT INTO Engine (id, aircraft_id, engine_type, hours_since_last_service) VALUES (3, 1, 'CF6-80C2B1', 700);
-Query:
- What is the total number of engines for each aircraft?
-Original Answer:
-SELECT a.model, COUNT(e.id) FROM Aircraft a JOIN Engine e ON a.id = e.aircraft_id GROUP BY a.model;
-Generated Answer:
-SELECT a.model, COUNT(e.id) FROM Aircraft a LEFT JOIN Engine e ON a.id = e.aircraft_id GROUP BY a.model;
-```
-
-gemma-3-4b_merged_model
-
-```bash
-model_id google/gemma-3-4b-pt
-Using device: gpu
-Using dtype: torch.bfloat16
-Loading checkpoint shards: 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 10/10 [01:07<00:00,  6.76s/it]
-Device set to use cuda:0
-Map: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 12500/12500 [00:01<00:00, 7602.23 examples/s]
-SELECT COUNT(*) FROM Safety_Protocols WHERE department = 'Metal Fabrication' AND protocol_date >= DATE_SUB(CURDATE(), INTERVAL 1 MONTH);
-The following generation flags are not valid and may be ignored: ['temperature', 'top_p']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
-Context:
- CREATE TABLE emergencies (type VARCHAR(255), response_time INT); INSERT INTO emergencies (type, response_time) VALUES ('Fire', 5), ('Medical', 8);
-Query:
- What is the difference in response time between fire and medical emergencies?
-Original Answer:
-SELECT type, LEAD(response_time) OVER (ORDER BY response_time) - response_time AS difference FROM emergencies;
-Generated Answer:
-SELECT type, LEAD(response_time) OVER (ORDER BY response_time) - response_time AS difference FROM emergencies;
-```
-
 **gemma3-n1s8-t4-test (n1-highmem-8 (vCPU 8개, 메모리 52GB) + NVIDIA T4)**
 
 google/gemma-3-1b-pt
@@ -486,100 +448,6 @@ Truncating train dataset: 100%|████████████████�
 {'train_runtime': 19694.5249, 'train_samples_per_second': 1.523, 'train_steps_per_second': 0.381, 'train_loss': 0.3633397448539734, 'epoch': 3.0}               
 100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 7500/7500 [5:28:14<00:00,  2.63s/it]
 No files have been modified since last commit. Skipping to prevent empty commit.
-```
-
-test_sql_inference.py
-
-```bash
-model_id google/gemma-3-1b-pt
-Using device: cpu
-Using dtype: torch.float32
-Loading checkpoint shards: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████| 3/3 [00:01<00:00,  1.65it/s]
-Device set to use cuda:0
-Map: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████| 12500/12500 [00:01<00:00, 7430.72 examples/s]
-SELECT SUM(num_attendees) FROM Events WHERE event_location = 'New York' AND event_type <> 'Workshop';
-The following generation flags are not valid and may be ignored: ['temperature', 'top_p']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
-Context:
- CREATE TABLE site_k_artifacts (id INT PRIMARY KEY, site_id INT, artifact_type VARCHAR(50), quantity INT); INSERT INTO site_k_artifacts (id, site_id, artifact_type, quantity) VALUES (1, 8, 'Stone tool', 15), (2, 8, 'Pottery shard', 20), (3, 8, 'Copper coin', 5), (4, 8, 'Bronze coin', 10);
-Query:
- Delete all records with 'Copper coin' artifact_type from the 'site_k_artifacts' table.
-Original Answer:
-DELETE FROM site_k_artifacts WHERE artifact_type = 'Copper coin';
-Generated Answer:
-SELECT site_id, artifact_type, quantity FROM site_k_artifacts WHERE artifact_type = 'Copper coin';
-```
-
-```bash
-Map: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████| 12500/12500 [00:01<00:00, 7422.83 examples/s]
-SELECT (COUNT(*) FILTER (WHERE autonomous_driving = TRUE)) * 100.0 / COUNT(*) FROM ResearchPapers WHERE publication_year = 2021;
-model_id google/gemma-3-4b-pt
-Loading checkpoint shards: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:10<00:00,  5.39s/it]
-Tokenizing train dataset: 100%|██████████████████████████████████████████████████████████████████████████████████| 10000/10000 [00:08<00:00, 1243.02 examples/s]
-Truncating train dataset: 100%|████████████████████████████████████████████████████████████████████████████████| 10000/10000 [00:00<00:00, 182496.73 examples/s]
-  0%|                                                                                                                                  | 0/7500 [00:00<?, ?it/s]`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.
-Traceback (most recent call last):
-  File "/home/sjkim/gemma3/finetune_sql_sfttrainer.py", line 141, in <module>
-    trainer.train()
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 2229, in train
-    return inner_training_loop(
-           ^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 2582, in _inner_training_loop
-    tr_loss_step = self.training_step(model, inputs, num_items_in_batch)
-                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/trl/trainer/sft_trainer.py", line 904, in training_step
-    return super().training_step(*args, **kwargs)
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/transformers/trainer.py", line 3845, in training_step
-    self.accelerator.backward(loss, **kwargs)
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/accelerate/accelerator.py", line 2730, in backward
-    self.scaler.scale(loss).backward(**kwargs)
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/_tensor.py", line 647, in backward
-    torch.autograd.backward(
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/autograd/__init__.py", line 354, in backward
-    _engine_run_backward(
-  File "/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/autograd/graph.py", line 829, in _engine_run_backward
-    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass
-           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.50 GiB. GPU 0 has a total capacity of 14.56 GiB of which 2.27 GiB is free. Including non-PyTorch memory, this process has 12.29 GiB memory in use. Of the allocated memory 12.05 GiB is allocated by PyTorch, and 104.42 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
-  0%|          | 0/7500 [00:02<?, ?it/s]
-```
-
-finetune_vision_sfttrainer.py
-
-```bash
-README.md: 1.22kB [00:00, 6.28MB/s]
-train-00000-of-00001.parquet: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████| 47.6M/47.6M [00:00<00:00, 193MB/s]
-Generating train split: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1345/1345 [00:00<00:00, 9662.03 examples/s]
-[{'role': 'system', 'content': [{'type': 'text', 'text': 'You are an expert product description writer for Amazon.'}]}, {'role': 'user', 'content': [{'type': 'text', 'text': 'Create a Short Product description based on the provided <PRODUCT> and <CATEGORY> and image.\nOnly return description. The description should be SEO optimized and for a better mobile search experience.\n\n<PRODUCT>\nMasterPieces Tribal Spirit Jigsaw Puzzle, The Chiefs, Featuring American Indian Tribe Traditions & Ceremonies, 1000 Pieces\n</PRODUCT>\n\n<CATEGORY>\nToys & Games | Puzzles | Jigsaw Puzzles\n</CATEGORY>\n'}, {'type': 'image', 'image': <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x500 at 0x70A6E85E5340>}]}, {'role': 'assistant', 'content': [{'type': 'text', 'text': 'Challenge yourself with this 1000-piece MasterPieces Tribal Spirit jigsaw puzzle!  Depicting the rich traditions and ceremonies of American Indian tribes, "The Chiefs" offers a stunning, culturally significant image perfect for puzzle enthusiasts.  High-quality pieces guarantee a satisfying solve.'}]}]
-model_id google/gemma-3-4b-pt
-Loading checkpoint shards: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:32<00:00, 16.01s/it]
-processor_config.json: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 70.0/70.0 [00:00<00:00, 697kB/s]
-chat_template.json: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 1.61k/1.61k [00:00<00:00, 17.3MB/s]
-preprocessor_config.json: 100%|██████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 570/570 [00:00<00:00, 5.22MB/s]
-Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.52, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
-`use_cache=True` is incompatible with gradient checkpointing. Setting `use_cache=False`.
-  1%|▊                                                                                                                                              | 2/337 [00:42<1:58:01, 21.14s/it]
-{'loss': 9.9039, 'grad_norm': 29.41756248474121, 'learning_rate': 0.0002, 'mean_token_accuracy': 0.5849237442016602, 'epoch': 0.01}                                                   
-{'loss': 5.679, 'grad_norm': 17.978452682495117, 'learning_rate': 0.0002, 'mean_token_accuracy': 0.7487379521131515, 'epoch': 0.03}                                                   
-{'loss': 5.1366, 'grad_norm': 18.68014144897461, 'learning_rate': 0.0002, 'mean_token_accuracy': 0.7553565979003907, 'epoch': 0.04}
-
-{'loss': 3.115, 'grad_norm': 8.573728561401367, 'learning_rate': 0.0002, 'mean_token_accuracy': 0.8290552139282227, 'epoch': 1.0}                                                     
-{'train_runtime': 6918.3363, 'train_samples_per_second': 0.194, 'train_steps_per_second': 0.049, 'train_loss': 3.510115796097662, 'mean_token_accuracy': 0.84203120470047, 'epoch': 1.0}
-100%|█████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 337/337 [1:55:18<00:00, 20.53s/it]
-Loading checkpoint shards: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:04<00:00,  2.00s/it]
-```
-
-test_vision_inference.py
-
-```bash
-[{'role': 'system', 'content': [{'type': 'text', 'text': 'You are an expert product description writer for Amazon.'}]}, {'role': 'user', 'content': [{'type': 'text', 'text': 'Create a Short Product description based on the provided <PRODUCT> and <CATEGORY> and image.\nOnly return description. The description should be SEO optimized and for a better mobile search experience.\n\n<PRODUCT>\nMasterPieces Tribal Spirit Jigsaw Puzzle, The Chiefs, Featuring American Indian Tribe Traditions & Ceremonies, 1000 Pieces\n</PRODUCT>\n\n<CATEGORY>\nToys & Games | Puzzles | Jigsaw Puzzles\n</CATEGORY>\n'}, {'type': 'image', 'image': <PIL.JpegImagePlugin.JpegImageFile image mode=RGB size=500x500 at 0x7BFEC8249D60>}]}, {'role': 'assistant', 'content': [{'type': 'text', 'text': 'Challenge yourself with this 1000-piece MasterPieces Tribal Spirit jigsaw puzzle!  Depicting the rich traditions and ceremonies of American Indian tribes, "The Chiefs" offers a stunning, culturally significant image perfect for puzzle enthusiasts.  High-quality pieces guarantee a satisfying solve.'}]}]
-model_id google/gemma-3-4b-pt
-Using device: gpu
-Using dtype: torch.bfloat16
-Loading checkpoint shards: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:02<00:00,  1.43s/it]
-Using a slow image processor as `use_fast` is unset and a slow processor was saved with this model. `use_fast=True` will be the default behavior in v4.52, even if the model was saved with a slow processor. This will result in minor differences in outputs. You'll still be able to use a slow processor with `use_fast=False`.
-
-Bring the Marvel universe home with the Hasbro Marvel Avengers-Serie Marvel Assemble Titan-Held Iron Man Actionfigures! This 30.5cm giant Iron Man figure is a must-have for any Marvel fan.  Perfect for imaginative play and collecting action figures.  Shop now!
 ```
 
 ```bash
@@ -945,4 +813,16 @@ Traceback (most recent call last):
     self.data.clone(memory_format=torch.preserve_format), self.requires_grad
     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 3.75 GiB. GPU 0 has a total capacity of 22.05 GiB of which 3.62 GiB is free. Including non-PyTorch memory, this process has 18.42 GiB memory in use. Of the allocated memory 13.05 GiB is allocated by PyTorch, and 5.16 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)
+```
+
+```bash
+Loading checkpoint shards: 100%|███████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:33<00:00, 16.91s/it]
+/home/sjkim/gemma3-env/lib/python3.12/site-packages/torch/_inductor/compile_fx.py:282: UserWarning: TensorFloat32 tensor cores for float32 matrix multiplication available but not enabled. Consider setting `torch.set_float32_matmul_precision('high')` for better performance.
+  warnings.warn(
+W0917 06:06:00.255000 3134 torch/_inductor/utils.py:1436] [0/0] Not enough SMs to use max_autotune_gemm mode
+English Input:
+You will remember there was no road—not even a pathway—between the castle of the Wicked Witch and the Emerald City. When the four travelers went in search of the Witch she had seen them coming, and so sent the Winged Monkeys to bring them to her. It was much harder to find their way back through the big fields of buttercups and yellow daisies than it was being carried. They knew, of course, they must go straight east, toward the rising sun; and they started off in the right way. But at noon, when the sun was over their heads, they did not know which was east and which was west, and that was the reason they were lost in the great fields. They kept on walking, however, and at night the moon came out and shone brightly. So they lay down among the sweet smelling yellow flowers and slept soundly until morning—all but the Scarecrow and the Tin Woodman.
+
+Korean Translation:
+['### Instruction:\nTranslate the following text from English to Korean as fantasy genre.\n\n### Input:\nYou will remember there was no road—not even a pathway—between the castle of the Wicked Witch and the Emerald City. When the four travelers went in search of the Witch she had seen them coming, and so sent the Winged Monkeys to bring them to her. It was much harder to find their way back through the big fields of buttercups and yellow daisies than it was being carried. They knew, of course, they must go straight east, toward the rising sun; and they started off in the right way. But at noon, when the sun was over their heads, they did not know which was east and which was west, and that was the reason they were lost in the great fields. They kept on walking, however, and at night the moon came out and shone brightly. So they lay down among the sweet smelling yellow flowers and slept soundly until morning—all but the Scarecrow and the Tin Woodman.\n\n', '\n물론 그들이 악한 마녀의 성과 에메랄드 시로 가는 방법은 도로나 길도 없었다. 마녀는 고양이가 되어 나들이에 온 네 명의 여행자를 보기만 하자 날아다니는 원숭이 무리를 보내 여행자들을 그녀의 성으로 데려왔다. 그 자리를 날아다니는 원숭이들에게 가는 것이 먼들가가 아니라 오히려 그 자리를 되돌아 가는 것이 더 힘든 일이었다. 그들이 간다 해도 동쪽으로 곧바로 햇빛이 드는 쪽으로 가도록, 정오가 되자 태양이 머리 위로 떠 있는 것과 그것이 동쪽과 서쪽의 의미가 무엇인지 알 수 없는 일이었다. 그때 그들은 대초원 위로 걷고 있었지만, 그들을 데려다준 도로가 나중에 들었던 들판과 걷고 있는 도로에 약간의 차이가 없었기 때문에 잃어버렸다는 사실을 알게되었다. 그렇게도 오랫동안 걷다가, 밤에 달이 나와 밝게 빛나자 그들은 달콤한 냄새를 풍기던 노란 꽃 사이로 누웠다. 들판 안의 꽃을 잠시 한 시간이 넘게 잤다. 그러는 동안 허수아비와 양철나무꾼이 잠을 자지  못했다.\n']
 ```

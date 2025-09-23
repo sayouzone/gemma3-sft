@@ -1,5 +1,6 @@
 ## Tests
 
+<<<<<<< HEAD
 | Model | vCPU | Memory | Test |
 | --- | --- | --- | --- |
 | g2-standard-4 | vCPU 4(Core 2) | 16GB | |
@@ -14,6 +15,9 @@
 | Custom | vCPU 32(Core 16) | 96-128GB | |
 
 #### gemma-3-4b
+=======
+gemma-3-4b
+>>>>>>> 6369d2c5f7bfae9672af3fcd67a007162923ed7b
 
 ```bash
 Loading checkpoint shards: 100%|████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████████| 2/2 [00:02<00:00,  1.42s/it]
@@ -35,6 +39,7 @@ Korean Translation:
 ]
 ```
 
+<<<<<<< HEAD
 ```bash
 gemma-3-4b-trans-en-ko_1/
 -rw-rw-r-- 1 sjkim sjkim       1473 Sep 19 08:08 README.md
@@ -255,6 +260,8 @@ Loading checkpoint shards:  20%|████████████████
 2025-09-19T04:47:39.186715+00:00 gemma3-g2s4-l4-test kernel: oom_reaper: reaped process 1553 (python3), now anon-rss:0kB, file-rss:0kB, shmem-rss:0kB
 ```
 
+=======
+>>>>>>> 6369d2c5f7bfae9672af3fcd67a007162923ed7b
 ## Errors
 
 #### gemma-3-12b model

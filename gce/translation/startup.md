@@ -20,12 +20,15 @@ ZONE=us-central1-c
 BUCKET_NAME=sayouzone-ai-gemma3
 ```
 
+<<<<<<< HEAD
 Custom vCPU 4(Core 2), Memory 32GB
 
 ```bash
 INSTANCE_NAME=gemma3-g2c4m32-l4-test
 ```
 
+=======
+>>>>>>> 6369d2c5f7bfae9672af3fcd67a007162923ed7b
 #### VM instance 시작
 
 ```bash
@@ -72,6 +75,7 @@ gcloud compute scp $LOCAL_FILE_PATH $REMOTE_ACCOUNT@$INSTANCE_NAME:~$DESTINATION
     --zone=$ZONE
 ```
 
+<<<<<<< HEAD
 ```bash
 LOCAL_PATH=trans/finetune_trans_12b.py
 REMOTE_PATH=/gemma3/trans
@@ -82,6 +86,8 @@ gcloud compute scp $LOCAL_PATH $REMOTE_ACCOUNT@$INSTANCE_NAME:~$REMOTE_PATH \
     --zone=$ZONE
 ```
 
+=======
+>>>>>>> 6369d2c5f7bfae9672af3fcd67a007162923ed7b
 Multiple files
 
 ```bash
@@ -96,6 +102,7 @@ gcloud compute scp text-to-sql/finetune_sql_sfttrainer.py text-to-sql/load_datas
 Folder
 
 ```bash
+<<<<<<< HEAD
 LOCAL_PATH=text-to-sql
 REMOTE_PATH=/gemma3
 REMOTE_ACCOUNT=sjkim
@@ -111,6 +118,13 @@ LOCAL_PATH=.
 REMOTE_ACCOUNT=sjkim
 
 gcloud compute scp --recurse $REMOTE_ACCOUNT@$INSTANCE_NAME:~$REMOTE_PATH $LOCAL_PATH  \
+=======
+LOCAL_FILE_PATH=text-to-sql
+DESTINATION_PATH=/gemma3/text-to-sql
+REMOTE_ACCOUNT=sjkim
+
+gcloud compute scp --recurse $LOCAL_FOLDER $REMOTE_ACCOUNT@$INSTANCE_NAME:~$DESTINATION_PATH \
+>>>>>>> 6369d2c5f7bfae9672af3fcd67a007162923ed7b
     --project=$PROJECT_ID \
     --zone=$ZONE
 ```

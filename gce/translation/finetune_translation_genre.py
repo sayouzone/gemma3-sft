@@ -156,7 +156,8 @@ print("HF_TOKEN", hf_token)
 os.environ["HF_TOKEN"] = hf_token
 #login_huggingface(hf_token)
 
-model_name = "gemma-3-4b"
+#model_name = "gemma-3-4b"
+model_name = "gemma-3-12b"
 # --- 2. 모델 및 토크나이저 로드 ---
 model_id = f"google/{model_name}-it"
 print(f"Loading base model and tokenizer for '{model_id}'...")
@@ -182,7 +183,9 @@ print("Model and tokenizer loaded successfully.")
 #print(f"Loading and preparing dataset '{dataset_name}'...")
 #raw_dataset = load_dataset(dataset_name, split="train")
 
-raw_dataset = load_dataset_file("datasets/The_Wonderful_Wizard_of_Oz.csv")
+#local_csv_file = "datasets/The_Wonderful_Wizard_of_Oz.csv"
+local_csv_file = "datasets/The_Wonderful_Wizard_of_Oz_1.csv"
+raw_dataset = load_dataset_file(local_csv_file)
 
 # 훈련 시간을 줄이기 위해 작은 서브셋으로 테스트 (실제 훈련 시에는 전체 데이터 사용)
 # raw_dataset = raw_dataset.shuffle(seed=42).select(range(10000))
